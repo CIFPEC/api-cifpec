@@ -1,11 +1,16 @@
 import express from "express";
+import "dotenv/config";
+import router from "./src/routes/index.js";
+import Models from "./src/models/index.js";
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(router)
 
-app.listen(5000, () => {
+
+app.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log(`http://localhost:${port}`);
 });
