@@ -11,14 +11,15 @@ const Roles = Database.define("role",
       primaryKey: true
     },
     //  - name
-    name: {
+    roleName: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Name is required!"
         }
-      }
+      },
+      field:"name"
     },
   },
   {

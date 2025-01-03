@@ -11,26 +11,37 @@ const Batches = Database.define("batch",
       primaryKey: true
     },
     //  - name
-    name: {
+    batchName: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
-          msg: "Name is required!"
+          msg: "Batch Name is required!"
         }
-      }
+      },
+      field:"name"
     },
     // - start_date
-    start_date: DataTypes.DATE,
+    startDate: {
+      type:DataTypes.DATE,
+      field:"start_date"
+    },
     // - end_date
-    end_date: DataTypes.DATE,
+    endDate: {
+      type:DataTypes.DATE,
+      field:"end_date"
+    },
     // - is_final
-    is_final: {
+    isFinal: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_final"
     },
     // - last_update
-    last_update: DataTypes.DATE,
+    lastUpdate: {
+      type:DataTypes.DATE,
+      field:"last_update"
+    },
     // - created_at
     // - updated_at
 

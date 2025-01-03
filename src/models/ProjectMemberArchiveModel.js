@@ -1,10 +1,10 @@
 import { Sequelize, DataTypes } from "sequelize";
 import Database from "./../config/database.js"
 import sequelizePaginate from "sequelize-paginate";
-import Batches from './batchModel.js';
-import Courses from "./courseModel.js";
+import ProjectArchives from "./projectArchiveModel.js";
+import UserDetails from "./userDetailModel.js";
 
-const BatchCourses = Database.define("batch_course",
+const ProjectMemberArchives = Database.define("project_members_archive",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -12,40 +12,40 @@ const BatchCourses = Database.define("batch_course",
       autoIncrement: true,
       primaryKey: true
     },
-    // - batch_id
-    batchId: {
+    // - project_id
+    projectId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
         notNull: {
-          msg: "Batch ID is required!"
-        }
-      },
-      references:{
-        model:Batches,
-        key:"id"
-      },
-      onDelete:"NO ACTION",
-      onUpdate:"CASCADE",
-      field:"batch_id"
-    },
-    // - course_id
-    courseId: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Course ID is required!"
+          msg: "Project ID is required!"
         }
       },
       references: {
-        model: Courses,
+        model: ProjectArchives,
         key: "id"
       },
       onDelete: "NO ACTION",
       onUpdate: "CASCADE",
-      field:"course_id"
+      field:"project_id"
     },
+    // - user_id
+    userId: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: "User ID is required!"
+        }
+      },
+      references: {
+        model: UserDetails,
+        key: "user_id"
+      },
+      onDelete: "NO ACTION",
+      onUpdate: "CASCADE",
+      field:"user_id"
+    }
   },
   {
     timestamps: true,
@@ -54,5 +54,5 @@ const BatchCourses = Database.define("batch_course",
   }
 );
 
-sequelizePaginate.paginate(BatchCourses);
-export default BatchCourses;
+sequelizePaginate.paginate(ProjectMemberArchives);
+export default ProjectMemberArchives;

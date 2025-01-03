@@ -13,7 +13,7 @@ const ProjectMembers = Database.define("project_member",
       primaryKey: true
     },
     // - project_id
-    project_id: {
+    projectId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -26,10 +26,11 @@ const ProjectMembers = Database.define("project_member",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"project_id"
     },
     // - user_id
-    user_id: {
+    userId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -42,7 +43,8 @@ const ProjectMembers = Database.define("project_member",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"user_id"
     }
   },
   {

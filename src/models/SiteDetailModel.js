@@ -25,7 +25,10 @@ const SiteDetails = Database.define("site_detail",
     // - banner
     banner: DataTypes.STRING,
     // - text_header
-    text_header: DataTypes.STRING,
+    textHeader: {
+      type:DataTypes.STRING,
+      field:"text_header",
+    },
     // - description
     description: DataTypes.STRING,
     // - updated_at

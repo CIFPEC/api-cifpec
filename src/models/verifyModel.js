@@ -12,7 +12,7 @@ const Verifies = Database.define("verify",
       primaryKey: true
     },
     //  - user_id
-    user_id: {
+    userId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -25,47 +25,52 @@ const Verifies = Database.define("verify",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"user_id"
     },
     // - code
-    code: {
+    verifyCode: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Code is required!"
         }
-      }
+      },
+      field:"code"
     },
     // - email_verify
-    email_verify: {
+    verifyEmail: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Email Verify is required!"
         }
-      }
+      },
+      field:"email_verify"
     },
-    // - status
-    type: {
+    // - type
+    verifyType: {
       type: DataTypes.ENUM("reset", "verify"),
       allowNull: false,
       validate: {
         notNull: {
           msg: "Verify Type is required!"
         }
-      }
+      },
+      field:"type"
     },
     // - expired_at
-    expired_at: {
+    expiredAt: {
       type: DataTypes.DATE,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Expired At is required!"
         }
-      }
+      },
+      field:"expired_at"
     },
   },
   {

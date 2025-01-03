@@ -13,7 +13,7 @@ const UserDetails = Database.define("user_detail",
       primaryKey: true
     },
     // - user_id
-    user_id: {
+    userId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -26,26 +26,30 @@ const UserDetails = Database.define("user_detail",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"user_id"
     },
     // - username
     username: {
       type: DataTypes.STRING,
     },
     // - gender
-    gender: {
+    userGender: {
       type: DataTypes.ENUM("male", "female"),
+      field:"gender"
     },
     // - phone_number
-    phone_number: {
+    userPhone: {
       type: DataTypes.STRING,
+      field:"phone_number"
     },
     // - nickname
-    nickname: {
+    userNickname: {
       type: DataTypes.STRING,
+      field:"nickname"
     },
     // - course_id
-    course_id: {
+    courseId: {
       type: DataTypes.BIGINT,
       defaultValue: null,
       references: {
@@ -53,12 +57,14 @@ const UserDetails = Database.define("user_detail",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"course_id"
     },
     // - is_final
-    is_final: {
+    isFinal: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_final"
     },
   },
   {

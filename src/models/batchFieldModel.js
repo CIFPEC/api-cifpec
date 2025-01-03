@@ -12,7 +12,7 @@ const BatchFields = Database.define("batch_field",
       primaryKey: true
     },
     // - batch_id
-    batch_id: {
+    batchId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -25,35 +25,40 @@ const BatchFields = Database.define("batch_field",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"batch_id"
     },
     // - field_name
-    field_name: {
+    fieldName: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Field Name is required!"
         }
-      }
+      },
+      field:"field_name"
     },
     // - field_type
-    field_type: {
+    fieldType: {
       type: DataTypes.ENUM("text", "number", "date", "select", "radio", "checkbox", "file"),
       allowNull: false,
       validate: {
         notNull: {
           msg: "Field Type is required!"
         }
-      }
+      },
+      field:"field_type"
     },
     // - field_tag
-    field_tag: {
+    fieldTag: {
       type: DataTypes.STRING,
+      field:"field_tag"
     },
     // - is_required
-    is_required: {
+    isRequired: {
       type: DataTypes.BOOLEAN,
+      field:"is_required"
     },
     // - created_at
     // - updated_at 

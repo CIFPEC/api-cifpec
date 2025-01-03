@@ -3,6 +3,7 @@ import Database from "./../config/database.js"
 import sequelizePaginate from "sequelize-paginate";
 import Courses from "./courseModel.js";
 import Batches from "./batchModel.js";
+import Users from './userModel.js';
 
 const Projects = Database.define("project",
   {
@@ -12,8 +13,41 @@ const Projects = Database.define("project",
       autoIncrement: true,
       primaryKey: true
     },
+    // - name
+    projectName:{
+      type:DataTypes.STRING,
+      allowNull:false,
+      validate:{
+        notNull:{
+          msg:"Project Name is required!"
+        }
+      },
+      field:"name"
+    },
+    // - thumbnail
+    projectThumbnail:{
+      type: DataTypes.STRING,
+      field:"thumbnail"
+    },
+    // - supervisor_id
+    supervisorId: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Supervisor ID is required!"
+        }
+      },
+      references: {
+        model: Users,
+        key: "id"
+      },
+      onDelete: "NO ACTION",
+      onUpdate: "CASCADE",
+      field:"supervisor_id"
+    },
     // - course_id
-    course_id: {
+    courseId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -26,10 +60,11 @@ const Projects = Database.define("project",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"course_id"
     },
     // - batch_id
-    batch_id: {
+    batchId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -42,12 +77,14 @@ const Projects = Database.define("project",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"batch_id"
     },
     // - is_complete
-    is_complete: {
+    isComplete: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_complete"
     },
     // - created_at
     // - updated_at

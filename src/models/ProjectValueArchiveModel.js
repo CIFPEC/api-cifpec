@@ -1,10 +1,9 @@
 import { Sequelize, DataTypes } from "sequelize";
 import Database from "./../config/database.js"
 import sequelizePaginate from "sequelize-paginate";
-import Projects from "./projectModel.js";
-import BatchFields from "./batchFieldModel.js";
+import ProjectArchives from "./projectArchiveModel.js";
 
-const ProjectFieldValues = Database.define("project_field_value",
+const ProjectValueArchives = Database.define("project_value_archive",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -22,37 +21,31 @@ const ProjectFieldValues = Database.define("project_field_value",
         }
       },
       references: {
-        model: Projects,
+        model: ProjectArchives,
         key: "id"
       },
       onDelete: "NO ACTION",
       onUpdate: "CASCADE",
       field:"project_id"
     },
-    // - field_id
-    fieldId: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Field ID is required!"
-        }
-      },
-      references: {
-        model: BatchFields,
-        key: "id"
-      },
-      onDelete: "NO ACTION",
-      onUpdate: "CASCADE",
-      field:"field_id"
-    },
-    // - value
-    fieldValue: {
+    // - name
+    projectName: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
-          msg: "Value is required!"
+          msg: "Project Name is required!"
+        }
+      },
+      field:"name"
+    },
+    // - value
+    projectValue: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Project Value is required!"
         }
       },
       field:"value"
@@ -65,5 +58,5 @@ const ProjectFieldValues = Database.define("project_field_value",
   }
 );
 
-sequelizePaginate.paginate(ProjectFieldValues);
-export default ProjectFieldValues;
+sequelizePaginate.paginate(ProjectValueArchives);
+export default ProjectValueArchives;

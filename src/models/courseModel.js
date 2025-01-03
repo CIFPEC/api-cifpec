@@ -1,6 +1,7 @@
 import { Sequelize,DataTypes } from "sequelize";
 import Database from "./../config/database.js"
 import  sequelizePaginate  from "sequelize-paginate";
+import Users from "./userModel.js";
 
 const Courses = Database.define("course",
   {
@@ -11,14 +12,26 @@ const Courses = Database.define("course",
       primaryKey:true
     },
     //  - name
-    name:{
+    courseName:{
       type: DataTypes.STRING,
       allowNull:false,
       validate:{
         notNull:{
-          msg:"Name is required!"
+          msg:"Course Name is required!"
         }
-      }
+      },
+      field:"name"
+    },
+    // - coordinator_id
+    coordinatorId: {
+      type: DataTypes.BIGINT,
+      references: {
+        model: Users,
+        key: "id"
+      },
+      onDelete: "NO ACTION",
+      onUpdate: "CASCADE",
+      field:"coordinator_id"
     },
   },
   {

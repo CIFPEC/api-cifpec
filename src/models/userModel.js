@@ -11,29 +11,39 @@ const Users = Database.define("user",
       autoIncrement: true,
       primaryKey: true
     },
-    email: {
+    // - name
+    userName: {
+      type: DataTypes.STRING,
+      field:"name"
+    },
+    // - email
+    userEmail: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: {
+        args: true,
+        msg: "Email already exists!"
+      },
       validate: {
         notNull: {
           msg: "Email is required!"
         },
-        unique: {
-          args: true,
-          msg: "Email already exists!"
-        },
-      }
+      },
+      field:"email"
     },
-    password: {
+    // - password
+    userPassword: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
         notNull: {
           msg: "Password is required!"
         }
-      }
+      },
+      field:"password"
     },
-    role_id: {
+    // - role_id
+    roleId: {
       type: DataTypes.BIGINT,
       allowNull: false,
       validate: {
@@ -46,23 +56,32 @@ const Users = Database.define("user",
         key: "id"
       },
       onDelete: "NO ACTION",
-      onUpdate: "CASCADE"
+      onUpdate: "CASCADE",
+      field:"role_id"
     },
-    is_varify: {
+    // - is_verify
+    isVerify: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_verify"
     },
-    is_lecturer_active: {
+    // - is_lecturer_active
+    isLecturerActive: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_lecturer_active"
     },
-    is_admin_approve: {
+    // - is_admin_approve
+    isAdminApprove: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_admin_approve"
     },
-    is_lecturer_request: {
+    // - is_lecturer_request
+    isLecturerRequest: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false
+      defaultValue: false,
+      field:"is_lecturer_request"
     },
     // - created_at
     // - updated_at

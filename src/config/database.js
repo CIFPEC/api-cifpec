@@ -7,7 +7,8 @@ const db = new Sequelize(
   process.env.PASS,
   {
     host: process.env.HOST,
-    dialect: process.env.DIALECT
+    dialect: process.env.DIALECT,
+    timezone: process.env.TIME_ZONE
   }
 );
 
