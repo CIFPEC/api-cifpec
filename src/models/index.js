@@ -19,40 +19,40 @@ import SupervisorCourses from './supervisorCourseModel.js';
 import Sessions from "./sessionModel.js";
 
 // users.id - user_details.user_id
-Users.hasOne(UserDetails, { foreignKey: "user_id" });
-UserDetails.belongsTo(Users, { foreignKey: "user_id" });
+Users.hasOne(UserDetails, { foreignKey: "user_id", as: "Profile" });
+UserDetails.belongsTo(Users, { foreignKey: "user_id", as: "User" });
 
 // users.role_id > roles.id
-Roles.hasMany(Users, { foreignKey: "role_id" });
-Users.belongsTo(Roles, { foreignKey: "role_id" });
+Roles.hasMany(Users, { foreignKey: "role_id", as: "Users" });
+Users.belongsTo(Roles, { foreignKey: "role_id", as: "Role" });
 
 // users.id - verify.user_id
-Users.hasOne(Verifies, { foreignKey: "user_id" });
-Verifies.belongsTo(Users, { foreignKey: "user_id" });
+Users.hasOne(Verifies, { foreignKey: "user_id", as: "Verification" });
+Verifies.belongsTo(Users, { foreignKey: "user_id", as: "User" });
 
 // user_details.course_id > courses.id
-UserDetails.belongsTo(Courses, { foreignKey: "course_id" });
-Courses.hasMany(UserDetails, { foreignKey: "course_id" });
+UserDetails.belongsTo(Courses, { foreignKey: "course_id", as: "EnrolledCourse" });
+Courses.hasMany(UserDetails, { foreignKey: "course_id", as: "Students" });
 
 // users.id < sessions.user_id
-Sessions.belongsTo(Users,{foreignKey:"user_id"});
-Users.hasMany(Sessions,{foreignKey:"user_id"});
+Users.hasMany(Sessions, { foreignKey: "user_id", as: "Sessions" });
+Sessions.belongsTo(Users, { foreignKey: "user_id", as: "User" });
 
 // projects.course_id > courses.id
-Projects.belongsTo(Courses, { foreignKey: "course_id" });
-Courses.hasMany(Projects, { foreignKey: "course_id" });
+Projects.belongsTo(Courses, { foreignKey: "course_id", as: "ProjectCourse" });
+Courses.hasMany(Projects, { foreignKey: "course_id", as: "Projects" });
 
 // batches.id < projects.batch_id
-Projects.belongsTo(Batches, { foreignKey: "batch_id" });
-Batches.hasMany(Projects, { foreignKey: "batch_id" });
+Projects.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
+Batches.hasMany(Projects, { foreignKey: "batch_id", as: "Projects" });
 
 // batch_fields.batch_id > batches.id
-BatchFields.belongsTo(Batches, { foreignKey: "batch_id" });
-Batches.hasMany(BatchFields, { foreignKey: "batch_id" });
+BatchFields.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
+Batches.hasMany(BatchFields, { foreignKey: "batch_id", as: "Fields" });
 
 // courses.coordinator_id - users.id
-Courses.belongsTo(Users,{foreignKey:"coordinator_id"});
-Users.hasOne(Courses,{foreignKey:"coordinator_id"});
+Courses.belongsTo(Users,{foreignKey:"coordinator_id",as:"Coordinator"});
+Users.hasOne(Courses,{foreignKey:"coordinator_id",as:"ManagedCourse"});
 
 // ARCHIVE TABLE
 // =============
@@ -134,17 +134,22 @@ Users.belongsToMany(Projects,{through:ProjectMembers});
 
 (async () => {
   if(+process.env.MIGRATE_TABLE){
-    const roles = [
-      {roleName:"admin"},
-      {roleName:"coordinator"},
-      {roleName:"supervisor"},
-      {roleName:"web Maintenance"},
-      {roleName:"student"},
-    ];
-    await Roles.bulkCreate(roles);
-    await Courses.create({courseName:"Web Development"});
     try {
-      await Database.sync({force:+process.env.MIGRATE_TYPE});
+      // check if migrate table is true, if true then recreate the table with new schema
+      if (+process.env.MIGRATE_TYPE){
+        await Database.sync({force: true});
+        const roles = [
+          {roleName:"admin"},
+          {roleName:"coordinator"},
+          {roleName:"supervisor"},
+          {roleName:"web Maintenance"},
+          {roleName:"student"},
+        ];
+        await Roles.bulkCreate(roles);
+        await Courses.create({courseName:"Web Development"});
+      }else{
+        await Database.sync({force: false});
+      }
     } catch (error) {
       console.log(error);
     }

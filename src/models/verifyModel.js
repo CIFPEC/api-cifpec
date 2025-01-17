@@ -32,12 +32,20 @@ const Verifies = Database.define("verify",
     verifyCode: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: {
+        args: true,
+      },
       validate: {
         notNull: {
           msg: "Code is required!"
         }
       },
       field:"code"
+    },
+    // - token
+    verifyToken: {
+      type: DataTypes.STRING,
+      field: "token"
     },
     // - email_verify
     verifyEmail: {
@@ -48,7 +56,7 @@ const Verifies = Database.define("verify",
           msg: "Email Verify is required!"
         }
       },
-      field:"email_verify"
+      field:"email"
     },
     // - type
     verifyType: {

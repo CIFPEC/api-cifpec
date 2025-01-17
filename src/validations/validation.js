@@ -12,7 +12,11 @@ export function middlewareError(err, req, res, next) {
 export function sequelizeError(err, req, res, next) {
   if(
     err.name === "SequelizeError" ||
-    err.name === "SequelizeValidationError" ||
+    err.name === "SequelizeValidationError"
+  ){
+    const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
+    throw new ErrorHandler(400, "Validation Error", errors);
+  }else if(
     err.name === "SequelizeUniqueConstraintError" ||
     err.name === "SequelizeForeignKeyConstraintError" ||
     err.name === "SequelizeCheckConstraintError" ||

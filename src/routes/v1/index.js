@@ -1,8 +1,15 @@
 import express from "express";
-import api from "./api.js";
+import auth from "./auth.js";
 
 const router = express.Router();
 
-router.use("/api/v1",api);
+router.get("/test", (req, res) => {
+  res.status(200).json({
+    statusCode: 200,
+    message: "API v1"
+   });
+});
+
+router.use("/auth",auth);
 
 export default router;
