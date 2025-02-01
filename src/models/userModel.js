@@ -84,11 +84,16 @@ const Users = Database.define("user",
       field:"is_lecturer_request"
     },
     // - created_at
+    createdAt: {
+      type: DataTypes.DATE,
+      field:"created_at",
+      defaultValue: DataTypes.NOW
+    }
     // - updated_at
   },
   {
     timestamps: true,
-    createdAt: "created_at",
+    // createdAt: "created_at",
     updatedAt: "updated_at"
   }
 );

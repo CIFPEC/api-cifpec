@@ -1,4 +1,5 @@
-import { registerService, requestCodeService, resetService, verifyService } from "./../services/authServices.js";
+import { renewAccessTokenService } from "./../services/resfreshTokenService.js";
+import { loginService, logoutService, registerService, requestCodeService, resetService, verifyService } from "./../services/authServices.js";
 
 /** 
  * ======
@@ -19,10 +20,30 @@ export async function register(req, res,next) {
   }
 }
 // login
-export async function login(req, res) {
-  
+export async function login(req, res,next) {
+  try {
+    const token = await loginService(res,req.body);
+    res.json({
+      statusCode: 200,
+      message: "Login successful. Welcome back!",
+      data: {token}
+    })
+  } catch (error) {
+    next(error);
+  }
 }
 // logout
+export async function logout(req, res,next) {
+  try {
+    await logoutService(req,res);
+    res.status(200).json({
+      statusCode: 200,
+      message: "Logout successful"
+    })
+  } catch (error) {
+    next(error);
+  }
+}
 
 /** 
  * ======
@@ -94,11 +115,32 @@ export async function requestCodeVerifyEmail(req, res, next) {
 export async function verifyEmail(req, res, next) {
   const verifyToken = req.headers["verify-token"];
   try {
-    await verifyService(verifyToken, req.body, 'email_verification');
+    const token = await verifyService(verifyToken, req.body, 'email_verification',res);
     res.status(200).json({
       statusCode: 200,
       message: "Email verified successfully",
+      data: {token},
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+/** 
+ * ===============
+ * RENEW TOKEN 
+ * ===============
+ * */
+// renew token
+export async function renewToken(req, res, next) {
+  try {
+    const token = await renewAccessTokenService(req,res);
+    res.status(200).json({
+      statusCode: 200,
+      message: "Renew token successful",
+      data: {token}
+    })
   } catch (error) {
     next(error);
   }

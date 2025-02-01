@@ -74,7 +74,7 @@ const welcome =`
           <p>We’re excited to have you on board! To get started, please verify your email address using the code below:</p>
           <div class="code">{{code}}</div>
           <p>This code will expire in <strong>{{minutes}}</strong>. If you did not request this, please ignore this email.</p>
-          <p style="font-style: italic; font-weight: bold;">Note that unverified accounts are automatically deleted 1 days after signup</p>
+          <p style="font-style: italic; font-weight: bold;">Note that unverified accounts are automatically deleted 7 days after signup</p>
           <p>If you have any questions or need help, feel free to contact us.</p>
           <p>Thank you,<br>The {{appName}} Team</p>
         </div>

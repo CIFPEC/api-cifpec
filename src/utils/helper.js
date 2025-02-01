@@ -15,13 +15,22 @@ export async function getLocation(){
     const response = await axios.get("https://get.geojs.io/v1/ip/geo.json");
     return response.data;
   } catch (error) {
-    throw new ErrorHandler(500, "Internal Server Error", error);
+    if (error.code === "ECONNABORTED") {
+      // Timeout berlaku
+      throw new ErrorHandler(504,"Gateway Timeout",[{ message: "Request Timeout. API too slow." }]);
+    } else if (error.response) {
+      // API luar reply dengan error
+      throw new ErrorHandler(502,"Bad Gateway",[{ message: "Bad Gateway. API error.", error: error.response.data }]);
+    } else {
+      // API luar langsung tak boleh dihubungi
+      throw new ErrorHandler(503,"Service Unavailable",[{ message: "Service Unavailable. API unreachable." }]);
+    }
   }
 }
 
 export function getCodeWithToken(data,type,{min=5,max=6,expired=2}={}){
   if(expired && typeof expired !== "number"){
-    throw new ErrorHandler(500)
+    throw new ErrorHandler(500,"Internal Server Error",[{ message: "Expired must be a number." }]);
   }
   const randomNum = getRandomNumber(min,max);
   const expiredTime = new Date(Date.now() + expired * 60 * 1000)
@@ -48,6 +57,12 @@ export function getCodeWithToken(data,type,{min=5,max=6,expired=2}={}){
 export function requestType (type){
   const validType = [
     {
+      type: "email_register",
+      subject: "Registration Verification Code",
+      value: "verify",
+      emailCode: "WELCOME"
+    },
+    {
       type: "email_verification",
       subject: "Email Verification Code",
       value: "verify",
@@ -60,21 +75,25 @@ export function requestType (type){
       emailCode: "RESET_PASSWORD"
     },
     {
-      type: "email_register",
-      subject: "Registration Verification Code",
-      value: "verify",
-      emailCode: "WELCOME"
-    },
-    {
       type: "password_reset",
       subject: "Reset Password",
       value: "reset",
       emailCode: "RESET_PASSWORD"
+    },
+    {
+      type: "email_login",
+      subject: "Login Verification Code",
+      value: "verify",
+      emailCode: "LOGIN_VERIFY"
     }
   ]
   const currentType = validType.find(item => item.type === type);
   if(!currentType){
-    throw new ErrorHandler(500,"Invalid request type");
+    throw new ErrorHandler(500,"Internal Server Error",[
+      {
+        message: "Invalid request type"
+      }
+    ]);
   }
   return currentType;
 }

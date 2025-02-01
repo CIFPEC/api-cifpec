@@ -3,24 +3,36 @@ import nodemailer from "nodemailer";
 import { ErrorHandler } from "../exceptions/errorHandler.js";
 import { htmlToText } from "html-to-text";
 
-// create transport
-const transport = nodemailer.createTransport({
-  host:process.env.EMAIL_HOST,
-  port:process.env.EMAIL_PORT,
-  auth: {
-    user: process.env.USER_EMAIL,
-    pass: process.env.USER_PASSWORD,
-  },
-});
-
-// test connection
-transport.verify((error, success) => {
-  if (error) {
-    throw new ErrorHandler(500,"SMTP Connection Error:", error);
-  } else {
-    console.log("SMTP Connected Successfully!");
-  }
-});
+async function mailConfig (){
+  return new Promise((resolve, reject) => { 
+    try {
+      // create transport
+      const transport = nodemailer.createTransport({
+        host:process.env.EMAIL_HOST,
+        port:process.env.EMAIL_PORT,
+        auth: {
+          user: process.env.USER_EMAIL,
+          pass: process.env.USER_PASSWORD,
+        },
+      });
+      
+      // test connection
+      transport.verify((error, success) => {
+        if (error) {
+          console.log("SMTP Connection Error: ",error);
+          reject(new ErrorHandler(500, "Internal Server Error",[error]));
+        } else {
+          console.log("SMTP Connected Successfully!");
+          resolve(transport);
+        }
+      });
+      
+      return transport;
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
 
 // send email
 const SendMail = async ({senderName, senderEmail},{to, subject, body}) => {
@@ -34,9 +46,10 @@ const SendMail = async ({senderName, senderEmail},{to, subject, body}) => {
     console.log("NOTE: ","Email not sent in debug mode");
     return;
   }
-
+  
   try {
-    const info = await transport.sendMail({
+    const transport = await mailConfig();
+    await transport.sendMail({
       from: `${senderName} <${senderEmail}>`,
       to,
       subject,
@@ -44,7 +57,8 @@ const SendMail = async ({senderName, senderEmail},{to, subject, body}) => {
       html: htmlContent, // html body
     });
   } catch (error) {
-    throw new ErrorHandler(500, "Failed to send email", error);
+    console.log("MAILER ERROR: ", "Failed to send email, ",error);
+    throw error;
   }
 };
 

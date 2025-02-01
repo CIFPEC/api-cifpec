@@ -27,8 +27,8 @@ Roles.hasMany(Users, { foreignKey: "role_id", as: "Users" });
 Users.belongsTo(Roles, { foreignKey: "role_id", as: "Role" });
 
 // users.id - verify.user_id
-Users.hasOne(Verifies, { foreignKey: "user_id", as: "Verification" });
-Verifies.belongsTo(Users, { foreignKey: "user_id", as: "User" });
+Users.hasOne(Verifies, { foreignKey: "user_id", as: "Verification",onDelete: "CASCADE", onUpdate: "CASCADE" });
+Verifies.belongsTo(Users, { foreignKey: "user_id", as: "User",onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 // user_details.course_id > courses.id
 UserDetails.belongsTo(Courses, { foreignKey: "course_id", as: "EnrolledCourse" });

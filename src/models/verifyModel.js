@@ -24,7 +24,7 @@ const Verifies = Database.define("verify",
         model: Users,
         key: "id"
       },
-      onDelete: "NO ACTION",
+      onDelete: "CASCADE",
       onUpdate: "CASCADE",
       field:"user_id"
     },

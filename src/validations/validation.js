@@ -15,7 +15,7 @@ export function sequelizeError(err, req, res, next) {
     err.name === "SequelizeValidationError"
   ){
     const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
-    throw new ErrorHandler(400, "Validation Error", errors);
+    return next(new ErrorHandler(400, "Validation Error", errors));
   }else if(
     err.name === "SequelizeUniqueConstraintError" ||
     err.name === "SequelizeForeignKeyConstraintError" ||
@@ -33,7 +33,7 @@ export function sequelizeError(err, req, res, next) {
     // err.name === "SequelizeError"  
   ){
     const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
-    throw new ErrorHandler(500, "Internal Server Error", errors);
+    return next(new ErrorHandler(500, "Internal Server Error", errors));
   }
   next(err);
 }

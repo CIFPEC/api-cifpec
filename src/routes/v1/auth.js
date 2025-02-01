@@ -1,7 +1,8 @@
 import express from "express";
 import { validateBody } from "./../../validations/validation.js";
-import { registerSchema, requestCodeSchema, resetSchema, verifySchema } from "./../../validations/auth/userValidations.js";
-import { register, login, requestCodeVerifyEmail, requestCodeReset, verifyReset, verifyEmail, reset } from "./../../controllers/authController.js";
+import { loginSchema, registerSchema, requestCodeSchema, resetSchema, verifySchema } from "./../../validations/auth/userValidations.js";
+import { register, login, requestCodeVerifyEmail, requestCodeReset, verifyReset, verifyEmail, reset, logout } from "./../../controllers/authController.js";
+import { authMiddleware } from './../../middlewares/authMiddleware.js';
 const router = express.Router();
 
 
@@ -13,7 +14,9 @@ const router = express.Router();
 // register
 router.post("/register",validateBody(registerSchema), register);
 // login
+router.post("/login",validateBody(loginSchema), login);
 // logout
+router.delete("/logout",authMiddleware,logout);
 
 /** 
  * ======
