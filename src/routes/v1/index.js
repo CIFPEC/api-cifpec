@@ -1,5 +1,6 @@
 import express from "express";
 import auth from "./auth.js";
+import courses from "./courses.js";
 import { renewToken } from "./../../controllers/authController.js";
 
 const router = express.Router();
@@ -13,5 +14,6 @@ router.get("/test", (req, res) => {
 
 router.use("/auth",auth);
 router.get("/token",renewToken);
+router.use("/courses",courses);
 
 export default router;

@@ -12,28 +12,32 @@ export function middlewareError(err, req, res, next) {
 export function sequelizeError(err, req, res, next) {
   if(
     err.name === "SequelizeError" ||
-    err.name === "SequelizeValidationError"
+    err.name === "SequelizeValidationError" ||
+    // in testing mode start
+    err.name === "SequelizeUniqueConstraintError" ||
+    err.name === "SequelizeForeignKeyConstraintError" ||
+    err.name === "SequelizeCheckConstraintError" ||
+    err.name === "SequelizeNotNullConstraintError"
+    // in testing mode end 
   ){
     const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
     return next(new ErrorHandler(400, "Validation Error", errors));
   }else if(
-    err.name === "SequelizeUniqueConstraintError" ||
-    err.name === "SequelizeForeignKeyConstraintError" ||
-    err.name === "SequelizeCheckConstraintError" ||
-    err.name === "SequelizeNotNullConstraintError" ||
-    err.name === "SequelizeDataError" 
-    // err.name === "SequelizeConnectionError" ||
-    // err.name === "SequelizeConnectionRefusedError" ||
-    // err.name === "SequelizeConnectionTimedOutError" ||
-    // err.name === "SequelizeHostNotFoundError" ||
-    // err.name === "SequelizeHostNotReachableError" ||
-    // err.name === "SequelizeInvalidConnectionError" ||
-    // err.name === "SequelizeConnectionAccessDeniedError" ||
-    // err.name === "SequelizeConnectionTimeoutError" ||
-    // err.name === "SequelizeError"  
+    err.name === "SequelizeDataError" ||
+    err.name === "SequelizeConnectionError" ||
+    err.name === "SequelizeConnectionRefusedError" ||
+    err.name === "SequelizeConnectionTimedOutError" ||
+    err.name === "SequelizeHostNotFoundError" ||
+    err.name === "SequelizeHostNotReachableError" ||
+    err.name === "SequelizeInvalidConnectionError" ||
+    err.name === "SequelizeConnectionAccessDeniedError" ||
+    err.name === "SequelizeConnectionTimeoutError"
   ){
-    const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
-    return next(new ErrorHandler(500, "Internal Server Error", errors));
+    // const errors = err.errors.map((error) => ({ field: error.path, message: error.message }));
+    // return next(new ErrorHandler(500, "Internal Server Error", errors));
+    // testing mode all error start
+    return next(new ErrorHandler(500, "Internal Server Error", err));
+    // testing mode all error end
   }
   next(err);
 }
