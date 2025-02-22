@@ -4,6 +4,11 @@ import { createCourseService, deleteCourseService, getCourseServices, updateCour
  * ======
  *  COURSES 
  * ======
+ * - Get All Courses
+ * - Get Course By Id
+ * - Create Course
+ * - Update Course
+ * - Delete Course
  * **/
 
 // Get All Courses
@@ -52,10 +57,10 @@ export async function getCourseById(req, res, next){
 // Update Course
 export async function updateCourseById(req, res, next){
   try {
-    const course = await updateCourseService(req.body);
+    const course = await updateCourseService({req},req.body);
     res.status(200).json({
       statusCode:200,
-      message:"Get course detail successfuly!",
+      message:"Course update successfuly!",
       data:course
     })
   } catch (error) {
@@ -66,7 +71,7 @@ export async function updateCourseById(req, res, next){
 // Delete Course (Optional)
 export async function destroyCourseById(req,res,next){
   try {
-    const course = await deleteCourseService(req.body.courseId);
+    const course = await deleteCourseService({req});
     res.status(200).json({
       statusCode:200,
       message:"Course delete successfuly!",

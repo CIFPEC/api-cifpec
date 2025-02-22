@@ -5,11 +5,6 @@ export const createCourseSchema = Joi.object({
 });
 
 export const updateCourseSchema = Joi.object({
-  courseId: Joi.number().integer().required(),
   courseName: Joi.string().optional(),
   coordinatorId: Joi.number().integer().optional(),
-});
-
-export const destroyCourseSchema = Joi.object({
-  courseId: Joi.number().integer().required(),
 });

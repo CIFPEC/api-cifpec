@@ -48,7 +48,7 @@ Batches.hasMany(Projects, { foreignKey: "batch_id", as: "Projects" });
 
 // batch_fields.batch_id > batches.id
 BatchFields.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
-Batches.hasMany(BatchFields, { foreignKey: "batch_id", as: "Fields" });
+Batches.hasMany(BatchFields, { foreignKey: "batch_id", as: "projectRequirements" });
 
 // courses.coordinator_id - users.id
 Courses.belongsTo(Users,{foreignKey:"coordinator_id",as:"Coordinator"});
@@ -113,8 +113,8 @@ Courses.hasMany(BatchCourses, { foreignKey: "course_id" });
 
 Option B (many-to-many)
 */ 
-Batches.belongsToMany(Courses,{through:BatchCourses});
-Courses.belongsToMany(Batches,{through:BatchCourses});
+Batches.belongsToMany(Courses, { through: BatchCourses, as: "batchCourses" ,onDelete: "CASCADE", onUpdate: "CASCADE" });
+Courses.belongsToMany(Batches, { through: BatchCourses, as: "coursesInBatch" ,onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 /* 
 NOTE: users to project (many-to-many)

@@ -25,8 +25,6 @@ const BatchCourses = Database.define("batch_course",
         model:Batches,
         key:"id"
       },
-      onDelete:"NO ACTION",
-      onUpdate:"CASCADE",
       field:"batch_id"
     },
     // - course_id
@@ -42,8 +40,6 @@ const BatchCourses = Database.define("batch_course",
         model: Courses,
         key: "id"
       },
-      onDelete: "NO ACTION",
-      onUpdate: "CASCADE",
       field:"course_id"
     },
   },

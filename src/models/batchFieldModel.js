@@ -58,7 +58,8 @@ const BatchFields = Database.define("batch_field",
     // - is_required
     isRequired: {
       type: DataTypes.BOOLEAN,
-      field:"is_required"
+      field:"is_required",
+      defaultValue: false
     },
     // - created_at
     // - updated_at 

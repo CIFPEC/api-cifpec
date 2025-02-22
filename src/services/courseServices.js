@@ -5,7 +5,13 @@ import { Courses, Database, Users } from "./../models/index.js";
  * ======
  *  COURSES 
  * ======
+ * - Get All Courses
+ * - Get Course By Id
+ * - Create Course
+ * - Update Course
+ * - Delete Course
  * **/
+
 // Get All Courses & Get Course By Id
 export async function getCourseServices({req,res}){
   // check if request params
@@ -96,34 +102,57 @@ export async function createCourseService(courseName){
 }
 
 // Update Course
-export async function updateCourseService(course){
+export async function updateCourseService({req},courseRequest){
+  let coordinator = null;
   const transaction = await Database.transaction();
   try {
+    // check parameter id start 
+    const courseId = parseInt(req.params.id) || null;
+    if (!courseId) {
+      throw new ErrorHandler(400, "Bad Request", [
+        { parameter: "id", message: "Required course ID" }
+      ])
+    }
+
+    if (typeof (courseId) !== "number") {
+      throw new ErrorHandler(400, "Bad Request", [
+        { parameter: "id", message: "Invalid course ID" },
+        { parameter: "id", message: "Course ID must be a number" }
+      ])
+    }
+
     // check course 
-    let singleCourse = await Courses.findOne({where:{id:course.courseId}});
+    let singleCourse = await Courses.findOne({where:{id:courseId}});
     if(!singleCourse){
       throw new ErrorHandler(404,"Not Found",[
         {field:"courseId", message:"Invalid course ID"}
       ])
     }
+    // end check parameter id
 
-    // check user id 
-    const coordinator = await Users.findOne({where:{id:course.coordinatorId}});
-    if(!coordinator){
-      throw new ErrorHandler(400,"Validation Error",[
-        {field:"coordinatorId", message:"Invalid Coordinator ID"},
-      ])
+    const { coordinatorId = null, courseName } = courseRequest;
+    if(coordinatorId===null){
+      coordinator = { id: null};
     }
-    // check user verify or not 
-    if(!coordinator.isVerify){
-      throw new ErrorHandler(400,"Bad Request",[
-        {field:"coordinatorId", message:"Coordinator ID is not verify"}
-      ])
+    if(coordinatorId){
+      // check user id 
+      coordinator = await Users.findOne({where:{id:coordinatorId}});
+      if(!coordinator){
+        throw new ErrorHandler(400,"Validation Error",[
+          {field:"coordinatorId", message:"Invalid Coordinator ID"},
+        ])
+      }
+      // check user verify or not 
+      if(!coordinator.isVerify){
+        throw new ErrorHandler(400,"Bad Request",[
+          {field:"coordinatorId", message:"Coordinator ID is not verify"}
+        ])
+      }
     }
 
     // update course
-    await Courses.update({coordinatorId:coordinator.id, courseName:coordinator.courseName},{where:{id: singleCourse.id}},{transaction});
-    singleCourse = await Courses.findOne({ where: { id: course.courseId } });
+    await Courses.update({coordinatorId:coordinator.id, courseName},{where:{id: singleCourse.id}},{transaction});
+    singleCourse = await Courses.findOne({ where: { id: courseId } });
 
     // transaction commit
     await transaction.commit();
@@ -133,6 +162,7 @@ export async function updateCourseService(course){
       coordinatorId: singleCourse.coordinatorId
     }
   } catch (error) {
+    console.log("UPDATE COURSE ERROR: ",error);
     // transaction rollback
     await transaction.rollback();
     throw error;
@@ -140,9 +170,25 @@ export async function updateCourseService(course){
 }
 
 // Delete Course (Optional)
-export async function deleteCourseService(courseId){
+export async function deleteCourseService({req}){
   const transaction = await Database.transaction();
   try {
+    // check parameter id
+    const courseId = parseInt(req.params.id) || null;
+    if (!courseId) {
+      throw new ErrorHandler(400, "Bad Request", [
+        { parameter: "id", message: "Required course ID" }
+      ])
+    }
+
+    if (typeof (courseId) !== "number") {
+      throw new ErrorHandler(400, "Bad Request", [
+        { parameter: "id", message: "Invalid course ID" },
+        { parameter: "id", message: "Course ID must be a number" }
+      ])
+    }
+
+    // check course
     const course = await Courses.findOne({where:{id:courseId}})
     if(!course){
       throw new ErrorHandler(400,"Bad Request",[
@@ -160,6 +206,7 @@ export async function deleteCourseService(courseId){
       coordinatorId:course.coordinatorId
     };
   } catch (error) {
+    console.log("DELETE COURSE ERROR: ",error);
     // transaction rollback
     await transaction.rollback();
     throw error;
