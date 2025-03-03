@@ -1,6 +1,6 @@
 import e from "express";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { BatchCourses, Batches, BatchFields, Courses, Database } from "./../models/index.js";
+import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database } from "./../models/index.js";
 import { Sequelize } from "sequelize";
 
 /**
@@ -28,33 +28,53 @@ export async function getBatchService({ req }) {
       }
 
       // Get batch by id
-      const batch = await Batches.findOne({ where: { id: req.params.id } })
+      const batch = await BatchModel.findOne({ 
+        where: { id: batchId },
+        include: [
+          {
+            model: CourseModel,
+            as: "batchCourses",
+            attributes: [["id", "courseId"], ["name", "courseName"]],
+            through: { attributes: [], }, // Hide batch_course
+          },
+          {
+            model: BatchFieldModel,
+            as: "projectRequirements",
+            attributes: [
+              ["field_name", "label"],
+              ["field_type", "type"],
+              ["is_required", "required"],
+            ],
+          }
+        ]
+      })
       if (!batch) {
         throw new ErrorHandler(404, "Not Found", [
           { parameter: "id", message: "Invalid batch ID" },
         ])
       }
 
-      // Get batchCourses
-      const batchCourses = await BatchCourses.findAll({ where: { batchId: batch.id } })
-      const batchFields = await BatchFields.findAll({ where: { batchId: batch.id } })
-
       const data = {
         batchId: batch.id,
         batchName: batch.batchName,
-        batchCourses: batchCourses,
+        batchCourses: batch.batchCourses,
         lastModify: batch.lastUpdate,
         createdAt: batch.createdAt,
         updatedAt: batch.updatedAt,
         isFinal: batch.isFinal,
         startDate: batch.startDate,
         endDate: batch.endDate,
-        projectRequirements: batchFields
+        projectRequirements: batch.projectRequirements.map((field) => ({
+          label: field.dataValues.label,
+          type: field.dataValues.type,
+          required: !!field.dataValues.required
+        }))
       }
 
       // return course
       return data;
     } catch (error) {
+      console.log("GET BATCH BY ID ERROR: ",error);
       throw error;
     }
   }
@@ -81,13 +101,13 @@ export async function getBatchService({ req }) {
       ],
       include: [
         {
-          model: Courses,
+          model: CourseModel,
           as: "batchCourses",
           attributes: [["id", "courseId"], ["name", "courseName"]],
           through: { attributes: [], }, // Hide batch_course
         },
         {
-          model: BatchFields,
+          model: BatchFieldModel,
           as: "projectRequirements",
           attributes: [
             ["field_name", "label"],
@@ -101,7 +121,7 @@ export async function getBatchService({ req }) {
       order: [["created_at", "DESC"]],
     }
     // get all data limit with sequelize-paginate
-    const batches = await Batches.paginate(options);
+    const batches = await BatchModel.paginate(options);
     const formattedData = [];
     const batchMap = new Map();
 
@@ -113,11 +133,11 @@ export async function getBatchService({ req }) {
           batchId: row.batchId,
           batchName: row.batchName,
           lastModify: row.lastModify,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
           isFinal: !!row.isFinal,
           startDate: row.startDate,
           endDate: row.endDate,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
           batchCourses: [],
           projectRequirements: new Map() // Use Map
         });
@@ -166,6 +186,7 @@ export async function getBatchService({ req }) {
     // return result
     return result;
   } catch (error) {
+    console.log("GET ALL BATCH ERROR: ",error);
     console.log(error);
     throw error;
   }
@@ -179,7 +200,7 @@ export async function createBatchService(batchRequest) {
     const { batchName, courses, lastUpdate, projectRequirements } = batchRequest;
 
     // **Step 1: Create Batch**
-    const batch = await Batches.create(
+    const batch = await BatchModel.create(
       {
         batchName,
         lastModify: lastUpdate,
@@ -194,7 +215,7 @@ export async function createBatchService(batchRequest) {
         courseId,
       }));
 
-      await BatchCourses.bulkCreate(batchCoursesData, { transaction });
+      await BatchCourseModel.bulkCreate(batchCoursesData, { transaction });
     }
 
     // **Step 3: Insert into batch_fields**
@@ -206,22 +227,22 @@ export async function createBatchService(batchRequest) {
         isRequired: field.required || false,
       }));
 
-      await BatchFields.bulkCreate(batchFieldsData, { transaction });
+      await BatchFieldModel.bulkCreate(batchFieldsData, { transaction });
     }
 
     // Commit transaction
     await transaction.commit();
 
     // **Step 4: Get new data**
-    const newBatch = await Batches.findByPk(batch.id, {
+    const newBatch = await BatchModel.findByPk(batch.id, {
       include: [
         {
-          model: Courses,
+          model: CourseModel,
           as: "batchCourses",
           attributes: ["id", "courseName"],
         },
         {
-          model: BatchFields,
+          model: BatchFieldModel,
           as: "projectRequirements",
           attributes: ["fieldName", "fieldType", "isRequired"],
         },
@@ -273,7 +294,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
       ])
     }
 
-    const batch = await Batches.findOne({ where: { id: batchId } })
+    const batch = await BatchModel.findOne({ where: { id: batchId } })
     if (!batch) {
       throw new ErrorHandler(404, "Not Found", [
         { parameter: "id", message: "Invalid batch ID" }
@@ -284,18 +305,43 @@ export async function updateBatchService({ req, res }, batchRequest) {
     const { batchName, courses, projectRequirements, lastUpdate } = batchRequest;
 
     // Update Batch Info
-    await Batches.update(
+    await BatchModel.update(
       { batchName, lastModify: lastUpdate },
       { where: { id: batchId }, transaction }
     );
 
     // Handle Batch Courses
-    const existingCourses = await BatchCourses.findAll({
+    const existingCourses = await BatchCourseModel.findAll({
       where: { batchId },
       attributes: ["courseId"]
     });
 
     const newCourseIds = courses; // courses from request
+    // check course id
+    newCourseIds.forEach(async(courseId) => {
+      if (typeof (courseId) !== "number") {
+        throw new ErrorHandler(400, "Bad Request", [
+          { parameter: "courses", message: "Invalid course ID" },
+          { parameter: "courses", message: "Course ID must be a number" }
+        ])
+      }
+    })
+
+    await Promise.all(
+      newCourseIds.map(async (courseId) => {
+        const course = await CourseModel.findOne({ where: { id: courseId } });
+
+        if (!course) {
+          throw new ErrorHandler(400, "Bad Request", [
+            { field: "courses", message: "Invalid course ID" },
+            { field: "courses", message: "Course not found" },
+            { field: "courses", message: `Course ID ${courseId} not found` },
+          ]);
+        }
+        return course;
+      })
+    );
+
     const coursesToDelete = existingCourses
       .map((course) => course.courseId)
       .filter((id) => !newCourseIds.includes(id));
@@ -303,7 +349,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
     // Delete courses user remove
     if (coursesToDelete.length > 0) {
       coursesToDelete.forEach(async (courseId) => {
-        await BatchCourses.destroy({
+        await BatchCourseModel.destroy({
           where: { courseId, batchId },
           transaction
         });
@@ -311,7 +357,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
     }
 
     // Bulk create for create/update new courses
-    await BatchCourses.bulkCreate(
+    await BatchCourseModel.bulkCreate(
       newCourseIds.map((courseId) => ({batchId, courseId})),
       {
         updateOnDuplicate: ["id","batchId", "courseId"],
@@ -320,7 +366,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
     );
 
     // Handle Batch Fields (Project Requirements)
-    const existingFields = await BatchFields.findAll({
+    const existingFields = await BatchFieldModel.findAll({
       where: { batchId },
       attributes: ["id", "fieldName", "fieldType", "isRequired"]
     });
@@ -339,7 +385,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
 
     // Delete fields user remove
     if (fieldsToDelete.length > 0) {
-      await BatchFields.destroy({
+      await BatchFieldModel.destroy({
         where: { id: fieldsToDelete.map((field) => field.id) },
         transaction
       });
@@ -356,7 +402,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
 
     for (const field of fieldsToUpdate) {
       const newField = newFields.find((nf) => nf.fieldName === field.fieldName);
-      await BatchFields.update(
+      await BatchFieldModel.update(
         { fieldType: newField.fieldType, isRequired: newField.isRequired },
         { where: { id: field.id }, transaction }
       );
@@ -368,7 +414,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
     );
 
     if (fieldsToInsert.length > 0) {
-      await BatchFields.bulkCreate(
+      await BatchFieldModel.bulkCreate(
         fieldsToInsert.map((field) => ({
           batchId,
           fieldName: field.fieldName,
@@ -380,15 +426,15 @@ export async function updateBatchService({ req, res }, batchRequest) {
     }
 
     // Get all data after update
-    const updatedBatch = await Batches.findByPk(batchId, {
+    const updatedBatch = await BatchModel.findByPk(batchId, {
       include: [
         {
-          model: Courses, 
+          model: CourseModel, 
           as: "batchCourses",
           attributes: ["id", "courseName"] 
         },
         {
-          model: BatchFields,
+          model: BatchFieldModel,
           as: "projectRequirements",
           attributes: ["fieldName", "fieldType", "isRequired"]
         }

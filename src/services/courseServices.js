@@ -1,5 +1,5 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { Courses, Database, Users } from "./../models/index.js";
+import {  Database, CourseModel, UserModel } from "./../models/index.js";
 
 /** 
  * ======
@@ -24,21 +24,48 @@ export async function getCourseServices({req,res}){
           { parameter: "id", message: "Id must be a number" }
         ])
       }
+
       // get course by id
-      const course = await Courses.findOne({where: {id: courseId}})
+      const course = await CourseModel.findOne({where: {id: courseId}})
       if(!course) {
         throw new ErrorHandler(404, "Not Found",[
           { parameter: "id", message: "Course not found" }
         ])
       }
 
-      // return course
-      return {
+      const data = {
         courseId: course.id,
         courseName: course.courseName,
-        coordinatorId: course.coordinatorId
+        coordinatorId: null,
+        coordinatorName: null
       }
+
+      // check coordinatorId
+      if(course.coordinatorId !== null){
+        const course = await CourseModel.findOne(
+          {
+            where: { id: courseId },
+            include: [
+              {
+                model: UserModel,
+                as: "Coordinator",
+                attributes: [["id", "coordinatorId"], ["name", "coordinatorName"]],
+              }
+            ]
+          })
+        if (!course) {
+          throw new ErrorHandler(404, "Not Found", [
+            { parameter: "id", message: "Course not found" }
+          ])
+        }
+        data.coordinatorId = course.Coordinator.dataValues.coordinatorId;
+        data.coordinatorName = course.Coordinator.dataValues.coordinatorName;
+      }
+
+      // return course
+      return data;
     } catch (error) {
+      console.log("GET COURSE BY ID ERROR: ", error);
       throw error;
     }
   }
@@ -51,12 +78,25 @@ export async function getCourseServices({req,res}){
 
   try {
     // get all data limit with sequelize-paginate
-    const courses = await Courses.paginate({page,paginate:limit});
-    const allCourse = courses.docs.map((singleCourse)=>({
-      courseId:singleCourse.id,
-      courseName:singleCourse.courseName,
-      coordinatorId:singleCourse.coordinatorId
+    const courses = await CourseModel.paginate({page,paginate:limit});
+    const allCourse = await Promise.all( courses.docs.map(async(singleCourse)=>{
+      if(singleCourse.coordinatorId === null){
+        return {
+          courseId:singleCourse.id,
+          courseName:singleCourse.courseName,
+          coordinatorId:singleCourse.coordinatorId,
+          coordinatorName:null
+        }
+      }
+      const user = await UserModel.findOne({where:{id:singleCourse.coordinatorId},attributes:[["id","coordinatorId"],["name","coordinatorName"]]})
+      return {
+        courseId: singleCourse.id,
+        courseName: singleCourse.courseName,
+        coordinatorId: user.dataValues.coordinatorId,
+        coordinatorName: user.dataValues.coordinatorName
+      }
     }));
+
     const result = {
       paginate:{
         currentPage: page,
@@ -69,6 +109,7 @@ export async function getCourseServices({req,res}){
     // return result
     return result;
   } catch (error) {
+    console.log("GET ALL COURSE ERROR: ", error);
     throw error;
   }
 }
@@ -78,7 +119,7 @@ export async function createCourseService(courseName){
   const transaction = await Database.transaction();
   try {
     // check course name 
-    const name =  await Courses.findOne({where:{courseName}})
+    const name =  await CourseModel.findOne({where:{courseName}})
     if(name){
       throw new ErrorHandler(409,"Conflict",[
         {field:"courseName", message:"Course name already exists!"}
@@ -86,16 +127,18 @@ export async function createCourseService(courseName){
     }
     
     // create course
-    const course = await Courses.create({courseName},{transaction});
+    const course = await CourseModel.create({courseName},{transaction});
     
     // commit transaction
     await transaction.commit();
     return {
       courseId:course.id,
       courseName:course.courseName,
-      coordinatorId:null
+      coordinatorId:null,
+      coordinatorName:null
     }
   } catch (error) {
+    console.log("CREATE COURSE ERROR: ",error);
     await transaction.rollback();
     throw error;
   }
@@ -122,7 +165,7 @@ export async function updateCourseService({req},courseRequest){
     }
 
     // check course 
-    let singleCourse = await Courses.findOne({where:{id:courseId}});
+    let singleCourse = await CourseModel.findOne({where:{id:courseId}});
     if(!singleCourse){
       throw new ErrorHandler(404,"Not Found",[
         {field:"courseId", message:"Invalid course ID"}
@@ -134,9 +177,16 @@ export async function updateCourseService({req},courseRequest){
     if(coordinatorId===null){
       coordinator = { id: null};
     }
+
+    // prepare return data
+    const data = {
+      coordinatorId: null,
+      coordinatorName:null
+    }
+
     if(coordinatorId){
       // check user id 
-      coordinator = await Users.findOne({where:{id:coordinatorId}});
+      coordinator = await UserModel.findOne({where:{id:coordinatorId}});
       if(!coordinator){
         throw new ErrorHandler(400,"Validation Error",[
           {field:"coordinatorId", message:"Invalid Coordinator ID"},
@@ -148,19 +198,20 @@ export async function updateCourseService({req},courseRequest){
           {field:"coordinatorId", message:"Coordinator ID is not verify"}
         ])
       }
+      
+      data.coordinatorId = coordinator.dataValues.id;
+      data.coordinatorName = coordinator.dataValues.userName;
     }
 
     // update course
-    await Courses.update({coordinatorId:coordinator.id, courseName},{where:{id: singleCourse.id}},{transaction});
-    singleCourse = await Courses.findOne({ where: { id: courseId } });
+    await CourseModel.update({coordinatorId:coordinator.id, courseName},{where:{id: singleCourse.id}},{transaction});
+    singleCourse = await CourseModel.findOne({ where: { id: courseId } });
+    data.courseId = singleCourse.id;
+    data.courseName = singleCourse.courseName;
 
     // transaction commit
     await transaction.commit();
-    return {
-      courseId: singleCourse.id,
-      courseName: singleCourse.courseName,
-      coordinatorId: singleCourse.coordinatorId
-    }
+    return data
   } catch (error) {
     console.log("UPDATE COURSE ERROR: ",error);
     // transaction rollback
@@ -189,22 +240,33 @@ export async function deleteCourseService({req}){
     }
 
     // check course
-    const course = await Courses.findOne({where:{id:courseId}})
+    const course = await CourseModel.findOne({where:{id:courseId}})
     if(!course){
       throw new ErrorHandler(400,"Bad Request",[
         {field:"courseId", message:"Invalid course ID"},
         {field:"courseId", message:"Course not found"},
       ])
     }
-    await Courses.destroy({where:{id:courseId}},{transaction})
+
+    // prepare return data
+    const data = {
+      courseId,
+      courseName:course.courseName,
+      coordinatorId:null,
+      coordinatorName:null
+    }
+
+    if(course.coordinatorId !== null){
+      const coordinator = await UserModel.findOne({where:{id:course.coordinatorId},attributes:[["id","coordinatorId"],["name","coordinatorName"]]});
+      data.coordinatorId = coordinator.dataValues.coordinatorId;
+      data.coordinatorName = coordinator.dataValues.coordinatorName;
+    }
+    // delete course
+    await CourseModel.destroy({where:{id:courseId}},{transaction})
     
     // transaction commit
     await transaction.commit();
-    return {
-      courseId,
-      courseName:course.courseName,
-      coordinatorId:course.coordinatorId
-    };
+    return data;
   } catch (error) {
     console.log("DELETE COURSE ERROR: ",error);
     // transaction rollback

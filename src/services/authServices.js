@@ -1,4 +1,4 @@
-import { Database,Users,Courses,UserDetails,Verifies,Sessions } from "./../models/index.js";
+import { Database,UserModel,CourseModel,UserDetailModel,VerifyModel,SessionModel } from "./../models/index.js";
 import { ErrorHandler } from './../exceptions/errorHandler.js';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -13,14 +13,18 @@ import { createVerifyResetToken } from "./../utils/createVerifyResetToken.js";
  * ======
  *  AUTH 
  * ======
+ * - register
+ * - login
+ * - logout
  * **/
+
 // register
 export async function registerService(userRequest) {
   const currentType = requestType("email_register");
   const roleId = getRole();
   const transaction = await Database.transaction();
   try {
-    const user = await Users.findOne({where: {email: userRequest.userEmail}});
+    const user = await UserModel.findOne({where: {email: userRequest.userEmail}});
     if(user) {
       throw new ErrorHandler(409, "Validation Error",[
         {field: "email", message: "Email already exists!"},
@@ -33,7 +37,7 @@ export async function registerService(userRequest) {
 
     if(userRequest.roleId === roleId.STUDENT){
       // check course
-      const checkCourse = await Courses.findOne({where: {id: userRequest.courseId}});
+      const checkCourse = await CourseModel.findOne({where: {id: userRequest.courseId}});
       if(!checkCourse) {
         throw new ErrorHandler(404, "Validation Error",[
           {field: "courseId", message: "Course not found!"},
@@ -42,7 +46,7 @@ export async function registerService(userRequest) {
     }
   
     // create userRequest and userRequest details
-    const userCreated = await Users.create({
+    const userCreated = await UserModel.create({
       userEmail: userRequest.userEmail,
       userPassword: userRequest.userPassword,
       roleId: userRequest.roleId,
@@ -52,7 +56,7 @@ export async function registerService(userRequest) {
     });
 
     if (userRequest.roleId === roleId.STUDENT) {
-      await UserDetails.create({
+      await UserDetailModel.create({
         userId: userCreated.id,
         courseId: userRequest.courseId,
       },
@@ -66,6 +70,7 @@ export async function registerService(userRequest) {
     await transaction.commit();
     return AccessToken;
   } catch (error) {
+    console.log("REGISTER ERROR: ",error);
     await transaction.rollback();
 
     // Conditional error handling
@@ -81,7 +86,7 @@ export async function loginService(res,userRequest){
   const transaction = await Database.transaction();
   try {
     // check user
-    const user = await Users.findOne({where: {userEmail: userRequest.userEmail}});
+    const user = await UserModel.findOne({where: {userEmail: userRequest.userEmail}});
     if(!user) {
       throw new ErrorHandler(401, "Unauthorized",[
         {field: "email", message: "Invalid email or password"},
@@ -123,6 +128,7 @@ export async function loginService(res,userRequest){
     await transaction.commit();
     return AccessToken;
   } catch (error) {
+    console.log("LOGIN ERROR: ",error);
     await transaction.rollback();
     throw error;
   }
@@ -140,7 +146,7 @@ export async function logoutService(req,res){
   const transaction = await Database.transaction(); 
   try {
     // compare refresh token from client and database
-    const checkRefreshToken = await Sessions.findOne({where:{sessionToken:refreshToken,userId:req.user.userId}});
+    const checkRefreshToken = await SessionModel.findOne({where:{sessionToken:refreshToken,userId:req.user.userId}});
     if(!checkRefreshToken) {
       throw new ErrorHandler(403, "Forbidden",[
         {header: "Token", message: "Invalid token"},
@@ -148,13 +154,14 @@ export async function logoutService(req,res){
     }
 
     // delete session
-    await Sessions.destroy({where:{sessionToken:refreshToken}}, {transaction});
+    await SessionModel.destroy({where:{sessionToken:refreshToken}}, {transaction});
     // clear cookie
     res.clearCookie("token");
     // commit transaction
     await transaction.commit();
     return true;
   } catch (error) {
+    console.log("LOGOUT ERROR: ",error);
     await transaction.rollback();
     throw error;
   }
@@ -164,7 +171,9 @@ export async function logoutService(req,res){
  * =======
  *  RESET 
  * =======
+ * - reset
  * **/
+
 // reset
 export async function resetService(token,user) {
   // get bearer token from header
@@ -197,11 +206,12 @@ export async function resetService(token,user) {
     user.newPassword = await bcrypt.hash(user.newPassword, salt);
     
     // update password
-    await Users.update({userPassword: user.newPassword}, {where: {id: user.userId}}, {transaction});
+    await UserModel.update({userPassword: user.newPassword}, {where: {id: user.userId}}, {transaction});
     
     await transaction.commit();
     return true;
   } catch (error) {
+    console.log("RESET ERROR: ",error);
     await transaction.rollback();
     throw error;
   }
@@ -211,7 +221,10 @@ export async function resetService(token,user) {
  * ===============
  *   VERIFY EMAIL 
  * ===============
+ * - verify email & code 
+ * - requestCode
  * **/
+
 // verify code email & code reset password
 export async function verifyService(token,user,type,res) {
   let currentType = requestType(type);
@@ -228,7 +241,7 @@ export async function verifyService(token,user,type,res) {
   const transaction = await Database.transaction();
   try {
     // compare code and email from request
-    const verify = await Verifies.findOne({where: {
+    const verify = await VerifyModel.findOne({where: {
       verifyCode: user.verifyCode, 
       verifyEmail: user.userEmail, 
       verifyType: currentType.value
@@ -265,11 +278,11 @@ export async function verifyService(token,user,type,res) {
     }
     
     // update user
-    await Users.update({isVerify: 1}, {where: {id: verify.userId}}, {transaction});
-    const userData = await Users.findOne({where: {id: verify.userId}});
+    await UserModel.update({isVerify: 1}, {where: {id: verify.userId}}, {transaction});
+    const userData = await UserModel.findOne({where: {id: verify.userId}});
     
     // delete verify
-    await Verifies.destroy({where: {userId: verify.userId}}, {transaction});
+    await VerifyModel.destroy({where: {userId: verify.userId}}, {transaction});
     
     await transaction.commit();
     // check verify type
@@ -280,6 +293,7 @@ export async function verifyService(token,user,type,res) {
     }
     return createAuthToken(res,userData);
   } catch (error) {
+    console.log("VERIFY ERROR: ",error);
     await transaction.rollback();
 
     // Conditional error handling
@@ -297,7 +311,7 @@ export async function requestCodeService(email,type) {
   const transaction = await Database.transaction();
   try {
     // check user
-    const user = await Users.findOne({ where: { userEmail: email } });
+    const user = await UserModel.findOne({ where: { userEmail: email } });
     if (!user) {
       throw new ErrorHandler(403, "Forbidden",[
         { field: "email", message: "If your email is correct, verification code will be sent to your email"},
@@ -314,10 +328,10 @@ export async function requestCodeService(email,type) {
     }
 
     // check verify userid is ecpired or not
-    const verify = await Verifies.findOne({ where: { userId: user.id } });
+    const verify = await VerifyModel.findOne({ where: { userId: user.id } });
     if (verify) {
       // delete verify
-      await Verifies.destroy({ where: { userId: user.id }, transaction });
+      await VerifyModel.destroy({ where: { userId: user.id }, transaction });
     }
 
     // create verifyToken and random number
@@ -339,7 +353,7 @@ export async function requestCodeService(email,type) {
       data.verifyToken = result.token[`${result.currentType.value}Token`]
     }
     // create verify
-    await Verifies.create(data, { transaction });
+    await VerifyModel.create(data, { transaction });
 
     // get template
     const htmlOutput = await compile({
@@ -359,6 +373,7 @@ export async function requestCodeService(email,type) {
     }
     return result.token;
   } catch (error) {
+    console.log("REQUEST CODE ERROR: ",error);
     await transaction.rollback();
 
     // Conditional error handling

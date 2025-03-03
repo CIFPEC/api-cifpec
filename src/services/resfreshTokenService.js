@@ -1,6 +1,6 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import jwt from 'jsonwebtoken';
-import {Database, Sessions} from "./../models/index.js";
+import {Database, SessionModel} from "./../models/index.js";
 
 // renew access token
 export async function renewAccessTokenService(req,res) {
@@ -14,7 +14,7 @@ export async function renewAccessTokenService(req,res) {
   const transaction = await Database.transaction();
   try {
     // compare refresh token from client and database
-    const checkRefreshToken = await Sessions.findOne({where:{sessionToken:refreshToken}});
+    const checkRefreshToken = await SessionModel.findOne({where:{sessionToken:refreshToken}});
     if(!checkRefreshToken) {
       throw new ErrorHandler(403, "Unauthorized",[
         {header: "Authorization", message: "Invalid token"},
@@ -26,7 +26,7 @@ export async function renewAccessTokenService(req,res) {
      * if expired, delete refresh token
      *  */ 
     if(checkRefreshToken.expiryTime < new Date()) {
-      await Sessions.destroy({where:{sessionToken:refreshToken}}, {transaction});
+      await SessionModel.destroy({where:{sessionToken:refreshToken}}, {transaction});
       res.clearCookie("token");
       throw new ErrorHandler(403, "Forbidden",[
         {header: "Authorization", message: "Token is expired"},
@@ -47,6 +47,7 @@ export async function renewAccessTokenService(req,res) {
     })
     return token;
   } catch (error) {
+    console.log("RENEW ACCESS TOKEN ERROR: ",error);
     throw error;
   }
 }

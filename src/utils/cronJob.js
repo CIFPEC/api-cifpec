@@ -1,10 +1,10 @@
 import { Op } from "sequelize";
-import { Sessions, Users, Verifies } from "./../models/index.js";
+import { SessionModel, UserModel } from "./../models/index.js";
 
 async function deleteUserExpiredSession() {
   try {
     // delete session where expiryTime < new Date()
-    await Sessions.destroy({ where: { expiryTime: { [Op.lt]: new Date() } } });
+    await SessionModel.destroy({ where: { expiryTime: { [Op.lt]: new Date() } } });
     console.log("Session deleted");
   } catch (error) {
     throw error;
@@ -14,7 +14,7 @@ async function deleteUserExpiredSession() {
 async function deleteUserNotVerify() {
   try {
     // find all user who has not verify
-    const users = await Users.findAll({
+    const users = await UserModel.findAll({
       where: {
         isVerify: false,
         createdAt: { [Op.lt]: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7) } // get user who created 7 days ago
@@ -27,7 +27,7 @@ async function deleteUserNotVerify() {
 
       // delete users
       if (userIds.length > 0) {
-        await Users.destroy({
+        await UserModel.destroy({
           where: {
             id: { [Op.in]: userIds }
           }

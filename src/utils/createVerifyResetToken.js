@@ -1,5 +1,5 @@
 import { getCodeWithToken } from "./helper.js";
-import { Database,Verifies } from "./../models/index.js";
+import { Database,VerifyModel } from "./../models/index.js";
 import SendMail from "./../utils/sendEmail.js";
 import { compile } from "./compile.js";
 export async function createVerifyResetToken(user, currentType,transaction,tokenConfig = {}) {
@@ -7,7 +7,7 @@ export async function createVerifyResetToken(user, currentType,transaction,token
   const result = getCodeWithToken({ userId: user.id, userEmail: user.userEmail }, currentType, tokenConfig);
   try {
     // create verify
-    await Verifies.create({
+    await VerifyModel.create({
       userId: result.userId,
       verifyCode: result.code,
       verifyToken: result.token[`${result.currentType.value}Token`],

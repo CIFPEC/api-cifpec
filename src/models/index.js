@@ -17,6 +17,7 @@ import ProjectArchives from "./projectArchiveModel.js";
 import ProjectValueArchives from './ProjectValueArchiveModel.js';
 import SupervisorCourses from './supervisorCourseModel.js';
 import Sessions from "./sessionModel.js";
+import { Create_Roles, Create_Courses } from "./../utils/autoCreate.js";
 
 // users.id - user_details.user_id
 Users.hasOne(UserDetails, { foreignKey: "user_id", as: "Profile" });
@@ -98,8 +99,8 @@ Users.hasMany(SupervisorCourses,{foreignKey:"supervisor_id"});
 
 Option B (Many-to-many)
 */
-Courses.belongsToMany(Users,{through:SupervisorCourses});
-Users.belongsToMany(Courses,{through:SupervisorCourses});
+Courses.belongsToMany(Users,{through:SupervisorCourses,foreignKey:"course_id",otherKey:"supervisor_id"});
+Users.belongsToMany(Courses,{through:SupervisorCourses,foreignKey:"supervisor_id",otherKey:"course_id"});
 
 /* NOTE: batches to courses (many-to-many)
 ==========================================
@@ -138,15 +139,10 @@ Users.belongsToMany(Projects,{through:ProjectMembers});
       // check if migrate table is true, if true then recreate the table with new schema
       if (+process.env.MIGRATE_TYPE){
         await Database.sync({force: true});
-        const roles = [
-          {roleName:"admin"},
-          {roleName:"coordinator"},
-          {roleName:"supervisor"},
-          {roleName:"web Maintenance"},
-          {roleName:"student"},
-        ];
-        await Roles.bulkCreate(roles);
-        await Courses.create({courseName:"Web Development"});
+        const ROLES = Create_Roles();
+        const COURSES = Create_Courses();
+        await Roles.bulkCreate(ROLES);
+        await Courses.bulkCreate(COURSES);
       }else{
         await Database.sync({force: false});
       }
@@ -159,4 +155,23 @@ Users.belongsToMany(Projects,{through:ProjectMembers});
 
 
 
-export { Database, Users, Verifies, Roles, UserDetails, Projects, BatchFields, ProjectFieldValues, ProjectMembers, Courses, Batches, BatchCourses, SiteDetails, ProjectArchives, ProjectMemberArchives, ProjectValueArchives, SupervisorCourses, Sessions };
+export {
+  Database,
+  Users as UserModel,
+  Verifies as VerifyModel,
+  Roles as RoleModel,
+  UserDetails as UserDetailModel,
+  Projects as ProjectModel,
+  BatchFields as BatchFieldModel,
+  ProjectFieldValues as ProjectFieldValueModel,
+  ProjectMembers as ProjectMemberModel,
+  Courses as CourseModel,
+  Batches as BatchModel,
+  BatchCourses as BatchCourseModel,
+  SiteDetails as SiteDetailModel,
+  ProjectArchives as ProjectArchiveModel,
+  ProjectMemberArchives as ProjectMemberArchiveModel,
+  ProjectValueArchives as ProjectValueArchiveModel,
+  SupervisorCourses as SupervisorCourseModel,
+  Sessions as SessionModel 
+};

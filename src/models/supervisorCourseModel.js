@@ -25,8 +25,6 @@ const SupervisorCourses = Database.define("supervisor_course",
         model: Courses,
         key: "id"
       },
-      onDelete: "NO ACTION",
-      onUpdate: "CASCADE",
       field:"course_id"
     },
     // - supervisor_id
@@ -42,8 +40,6 @@ const SupervisorCourses = Database.define("supervisor_course",
         model: Users,
         key: "id"
       },
-      onDelete: "NO ACTION",
-      onUpdate: "CASCADE",
       field:"supervisor_id"
     },
   },
