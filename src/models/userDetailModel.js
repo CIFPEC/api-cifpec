@@ -30,8 +30,9 @@ const UserDetails = Database.define("user_detail",
       field:"user_id"
     },
     // - username
-    username: {
+    userUsername: {
       type: DataTypes.STRING,
+      field:"username"
     },
     // - gender
     userGender: {

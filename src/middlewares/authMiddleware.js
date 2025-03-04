@@ -16,7 +16,9 @@ export function authMiddleware(req, res, next) {
     }
     req.user = {
       userId:decoded.userId,
-      userEmail:decoded.userEmail
+      userEmail:decoded.userEmail,
+      roleId:decoded.roleId,
+      roleName:decoded.roleName
     };
   });
   next();

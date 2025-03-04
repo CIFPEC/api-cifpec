@@ -1,6 +1,7 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import jwt from 'jsonwebtoken';
 import {Database, SessionModel} from "./../models/index.js";
+import { CreateAccessToken } from "../utils/helper.js";
 
 // renew access token
 export async function renewAccessTokenService(req,res) {
@@ -42,7 +43,7 @@ export async function renewAccessTokenService(req,res) {
         ]);
       }
       // create access token
-      const AccessToken = jwt.sign({userId: checkRefreshToken.userId,userEmail: checkRefreshToken.userEmail}, process.env.ACCESS_KEY, { expiresIn:"20s" });
+      const AccessToken = CreateAccessToken({userId: decoded.userId,userEmail: decoded.userEmail,roleId: decoded.roleId, roleName: decoded.roleName});
       token = AccessToken;
     })
     return token;

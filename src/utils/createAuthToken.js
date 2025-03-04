@@ -1,9 +1,13 @@
 import jwt from 'jsonwebtoken';
-import { SessionModel } from './../models/index.js';
+import { RoleModel, SessionModel } from './../models/index.js';
+import { CreateAccessToken } from './helper.js';
 // create refresh and access token
 export async function createAuthToken(res,user){
+  try {
+    const Role = await RoleModel.findOne({where: {id: user.roleId},attributes: [["id","roleId"],["name","roleName"]]});
+    
     // create refresh token
-    const ResreshToken = jwt.sign({userId: user.id,userEmail: user.userEmail}, process.env.SECRET_KEY, { expiresIn:"1d" });
+    const ResreshToken = jwt.sign({userId: user.id, userEmail: user.userEmail, roleId: Role.dataValues.roleId, roleName: Role.roleName}, process.env.SECRET_KEY, { expiresIn:"1d" });
     // set cookies (http only)
     res.cookie("token", ResreshToken, {
       httpOnly: true,
@@ -12,9 +16,8 @@ export async function createAuthToken(res,user){
     })
     
     // create access token
-    const AccessToken = jwt.sign({userId: user.id,userEmail: user.userEmail}, process.env.ACCESS_KEY, { expiresIn:"20s" });
+    const AccessToken = CreateAccessToken({ userId: user.id, userEmail: user.userEmail, roleId: Role.dataValues.roleId, roleName: Role.roleName });
 
-  try {
     // create session
     await SessionModel.create({
       userId: user.id,

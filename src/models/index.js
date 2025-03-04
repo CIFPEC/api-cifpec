@@ -99,8 +99,8 @@ Users.hasMany(SupervisorCourses,{foreignKey:"supervisor_id"});
 
 Option B (Many-to-many)
 */
-Courses.belongsToMany(Users,{through:SupervisorCourses,foreignKey:"course_id",otherKey:"supervisor_id"});
-Users.belongsToMany(Courses,{through:SupervisorCourses,foreignKey:"supervisor_id",otherKey:"course_id"});
+Courses.belongsToMany(Users,{through:SupervisorCourses,as:"Supervisors",foreignKey:"course_id",otherKey:"supervisor_id"});
+Users.belongsToMany(Courses,{through:SupervisorCourses,as:"Courses",foreignKey:"supervisor_id",otherKey:"course_id"});
 
 /* NOTE: batches to courses (many-to-many)
 ==========================================

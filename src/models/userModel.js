@@ -88,13 +88,18 @@ const Users = Database.define("user",
       type: DataTypes.DATE,
       field:"created_at",
       defaultValue: DataTypes.NOW
-    }
+    },
     // - updated_at
+    updatedAt: {
+      type: DataTypes.DATE,
+      field:"updated_at",
+      defaultValue: DataTypes.NOW
+    }
   },
   {
     timestamps: true,
     // createdAt: "created_at",
-    updatedAt: "updated_at"
+    // updatedAt: "updated_at"
   }
 );
 

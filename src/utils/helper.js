@@ -2,6 +2,7 @@ import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import axios from "axios";
 import jwt from 'jsonwebtoken';
 import moment from "moment";
+import { geojs } from "./localMode.js";
 
 export function getRandomNumber(minimum, maximum) {
   const min = 10 ** (minimum - 1);
@@ -11,8 +12,13 @@ export function getRandomNumber(minimum, maximum) {
 }
 
 export async function getLocation(){
+  let response;
   try {
-    const response = await axios.get("https://get.geojs.io/v1/ip/geo.json");
+    if (process.env.ENVIROMENT_MODE === "Development") {
+      response = await geojs();
+    }else{
+      response = await axios.get("https://get.geojs.io/v1/ip/geo.json");
+    }
     return response.data;
   } catch (error) {
     if (error.code === "ECONNABORTED") {
@@ -101,11 +107,16 @@ export function requestType (type){
 export function getRole(){
   const ROLE = {
     ADMIN: 1,
-    COORDINATOR: 2,
-    SUPERVISOR: 3,
-    WEB_MAINTENANCE: 4,
+    WEB_MAINTENANCE: 2,
+    COORDINATOR: 3,
+    SUPERVISOR: 4,
     STUDENT: 5,
   };
 
   return ROLE;
+}
+
+export function CreateAccessToken({userId,userEmail,roleId,roleName}){
+  const AccessToken = jwt.sign({userId, userEmail, roleId, roleName}, process.env.ACCESS_KEY, { expiresIn:"20s" });
+  return AccessToken;
 }

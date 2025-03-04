@@ -2,6 +2,7 @@ import express from "express";
 import auth from "./auth.js";
 import courses from "./courses.js";
 import batches from "./batches.js";
+import user from "./user.js";
 import { renewToken } from "./../../controllers/authController.js";
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.use("/auth",auth);
 router.get("/token",renewToken);
 router.use("/courses",courses);
 router.use("/batches",batches);
+router.use("/user",user);
 
 export default router;
