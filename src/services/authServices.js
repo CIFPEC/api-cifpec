@@ -55,7 +55,7 @@ export async function registerService(userRequest) {
       transaction
     });
 
-    if (userRequest.roleId === roleId.STUDENT) {
+    if (userRequest.roleId !== roleId.ADMIN && userRequest.roleId !== roleId.WEB_MAINTENANCE) {
       await UserDetailModel.create({
         userId: userCreated.id,
         courseId: userRequest.courseId,
@@ -63,6 +63,13 @@ export async function registerService(userRequest) {
       {
         transaction
       });
+    }else{
+      await UserDetailModel.create({
+        userId: userCreated.id
+      },
+        {
+          transaction
+        });
     }
 
     const AccessToken = await createVerifyResetToken(userCreated, currentType, transaction);

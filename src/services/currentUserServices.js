@@ -1,4 +1,5 @@
-import { CourseModel, Database,RoleModel,UserDetailModel,UserModel } from "../models/index.js";
+import { CourseModel, Database,RoleModel,SupervisorCourseModel,UserDetailModel,UserModel } from "../models/index.js";
+import { getRole } from "./../utils/helper.js";
 
 /**
  * ========
@@ -14,49 +15,95 @@ import { CourseModel, Database,RoleModel,UserDetailModel,UserModel } from "../mo
 
 // Get Current User
 export async function getCurrentUserService({req}){
+  const roleId = getRole();
+  let user;
   try {
-    const user = await UserModel.findOne({
-      where: { 
-        id: req.user.userId, 
-        userEmail: req.user.userEmail 
-      },
-      include: [
-        {
-          model: RoleModel,
-          as: "Role",
-          attributes: ["id", "name"],
-        },
-        {
-          model: UserDetailModel,
-          as: "Profile",
-        },
-        {
-          model:CourseModel,
-          as:"courses",
-          attributes: ["id","name"]
-        }
-      ],
-    });
-    console.log(user);
-    // console.log(UserModel.associations);
-    // const data = {
-    //   userId: user.id,
-    //   course: user.Course.name,
-    //   email: user.userEmail,
-    //   username: user.userDetails.username,
-    //   gender: user.userDetails.gender,
-    //   phoneNumber: user.userDetails.phoneNumber,
-    //   nickname: user.userDetails.nickname,
-    //   profileImage: user.userDetails.profileImage,
-    //   role: user.role.name,
-    //   // accountStatus: "active",
-    //   joinDate: user.createdAt,
-    //   lastUpdate: user.updatedAt,
-    //   isVerify: user.isVerify
-    // } 
+    if (req.user.roleId === roleId.ADMIN || req.user.roleId === roleId.WEB_MAINTENANCE){
+      user = await UserModel.findOne({
+        where: { id: req.user.userId },
+        attributes: ["userName", "userEmail", "isVerify", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"]
+          }
+        ]
+      });
+    } else {
+      // user = await CourseModel.findOne({
+      //   where: { coordinatorId: req.user.userId },
+      //   attributes: [["id", "courseId"], ["name", "courseName"]],
+      //   include: [
+      //     {
+      //       model: UserModel,
+      //       as: "Coordinator",
+      //       attributes: ["userName", "userEmail", "isVerify", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+      //       include: [
+      //         {
+      //           model: UserDetailModel,
+      //           as: "Profile",
+      //           attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"]
+      //         },
+      //         {
+      //           model: RoleModel,
+      //           as: "Role",
+      //           attributes: [["id", "roleId"], ["name", "roleName"]],
+      //         },
+      //       ]
+      //     }
+      //   ]
+      // });
+      user = await UserModel.findOne({
+        where: { id: req.user.userId },
+        attributes: ["userName", "userEmail", "isVerify", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            include: [
+              {
+                model: CourseModel,
+                as: "EnrolledCourse",
+                attributes: [["id", "courseId"], ["name", "courseName"]]
+              }
+            ]
+          }
+        ]
+      });
+    }
 
-    // return data;
-    return;
+    const data = {
+      userId: user.Profile.userId,
+      userName: user.userName,
+      userEmail: user.userEmail,
+      userUsername: user.Profile.userUsername,
+      userGender: user.Profile.userGender,
+      userPhoneNumber: user.Profile.userPhone,
+      userNickname: user.Profile.userNickname,
+      // userProfileImage: user.Profile.profileImage,
+      userRole: user.Role,
+      joinDate: user.joinDate,
+      lastUpdate: user.lastUpdate,
+      isVerify: user.isVerify
+    } 
+
+    if (user.Profile.EnrolledCourse){
+      data.userCourse = user.Profile.EnrolledCourse
+    }
+
+    return data;
   } catch (error) {
     console.log("GET CURRENT USER: ",error);
     throw error;

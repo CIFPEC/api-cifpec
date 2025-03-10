@@ -44,7 +44,7 @@ export const registerSchema = Joi.object({
   courseId: Joi.number()
     .integer()
     .when('roleId', {
-      is: role.STUDENT,
+      is: Joi.valid(role.STUDENT, role.COORDINATOR, role.SUPERVISOR),
       then: Joi.required(),
       otherwise: Joi.forbidden(),
     })
