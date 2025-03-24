@@ -127,3 +127,45 @@ export const verifySchema = Joi.object({
     'any.required': 'Email is required.',
   })
 })
+
+/**
+ * ================
+ * CURRENT USER
+ * ================
+ * - update current user
+ * - update current user password
+ */
+// update current user
+export const updateCurrentUserSchema = Joi.object({
+  userEmail: Joi.string().email().optional().messages({
+    'string.email': 'Invalid email format.',
+  }),
+  userName: Joi.string().optional(),
+  userUsername: Joi.string().min(3).optional(),
+  userGender: Joi.string().optional(),
+  userPhone: Joi.number().min(10).optional(),
+  userProfileImage: Joi.string().optional()
+});
+
+// update current user password
+export const updateCurrentUserPasswordSchema = Joi.object({
+  oldPassword: Joi.string().required(),
+  newPassword: Joi.string()
+    .min(8)
+    .max(32)
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[_@$!%*?&])[A-Za-z\\d_@$!%*?&]{8,}$'))
+    .required()
+    .messages({
+      'string.pattern.base': 'Password must include uppercase, lowercase, number, and special character.',
+      'string.min': 'Password must be at least 8 characters.',
+      'string.max': 'Password must not exceed 32 characters.',
+      'any.required': 'Password is required.',
+    }),
+  retypePassword: Joi.string()
+    .valid(Joi.ref('newPassword'))
+    .required()
+    .messages({
+      'any.only': 'Passwords do not match.',
+      'any.required': 'Retype password is required.',
+    }),
+});

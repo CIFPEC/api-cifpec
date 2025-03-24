@@ -1,5 +1,7 @@
+import { ErrorHandler } from "../exceptions/errorHandler.js";
 import { CourseModel, Database,RoleModel,SupervisorCourseModel,UserDetailModel,UserModel } from "../models/index.js";
 import { getRole } from "./../utils/helper.js";
+import bcrypt from 'bcrypt';
 
 /**
  * ========
@@ -109,3 +111,54 @@ export async function getCurrentUserService({req}){
     throw error;
   }
 } 
+
+// Update Current User
+export async function updateCurrentUserService({req},requestData){
+  const { userEmail, userName, userUsername, userGender, userPhone, userProfileImage } = requestData;
+  const updateData = { 
+    userUsername, 
+    userGender, 
+    userPhone, 
+    userProfileImage
+  };
+
+  const transaction = await Database.transaction();
+  try {
+    await UserModel.update({userEmail,userName},{where:{id:req.user.userId}},{transaction});
+    await UserDetailModel.update(updateData,{where:{id:req.user.userId}},{transaction});
+
+    await transaction.commit();
+    return getCurrentUserService({req});
+  } catch (error) {
+    console.log("UPDATE CURRENT USER: ",error);
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+// Update Current User Password
+export async function updateCurrentUserPasswordService({ req }, requestData) {
+  const transaction = await Database.transaction();
+  try {
+    // compare password 
+    const user = await UserModel.findOne({where:{id:req.user.userId}});
+    const isMatch = await bcrypt.compare(requestData.oldPassword, user.userPassword);
+    if(!isMatch){
+      throw new ErrorHandler(403,"Forbidden",[
+        { field: "oldPassword", message: "Incorrect old password. Please check and try again." },
+      ]);
+    }
+
+    // hash password before changed
+    const salt = await bcrypt.genSalt(10);
+    const newPassword = await bcrypt.hash(requestData.newPassword, salt);
+    await UserModel.update({userPassword:newPassword}, { where: { id: req.user.userId } }, { transaction });
+    
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    console.log("UPDATE CURRENT USER PASSWORD: ", error);
+    await transaction.rollback();
+    throw error;
+  }
+}

@@ -1,6 +1,8 @@
 import express from 'express';
-import { getCurrentUser } from '../../controllers/currentUserController.js';
+import { getCurrentUser, updateCurrentUser, updateCurrentUserPassword } from '../../controllers/currentUserController.js';
 import { authMiddleware } from './../../middlewares/authMiddleware.js';
+import { validateBody } from './../../validations/validation.js';
+import { updateCurrentUserPasswordSchema, updateCurrentUserSchema } from '../../validations/auth/userValidations.js';
 const router = express.Router();
 
 /**
@@ -16,5 +18,7 @@ const router = express.Router();
 
 // Get Current User
 router.get("/profile",authMiddleware, getCurrentUser);
+router.patch("/profile",validateBody(updateCurrentUserSchema),authMiddleware, updateCurrentUser);
+router.patch("/profile/password",validateBody(updateCurrentUserPasswordSchema),authMiddleware, updateCurrentUserPassword);
 
 export default router;
