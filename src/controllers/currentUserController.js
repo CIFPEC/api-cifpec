@@ -28,12 +28,21 @@ export async function getCurrentUser(req,res,next){
 // Update Current User
 export async function updateCurrentUser(req,res,next){
   try {
-    const user = await updateCurrentUserService({req},req.body);
-    res.status(200).json({
-      statusCode: 200,
-      message: "Update Current User Successfuly",
-      data: user
-    })
+    const user = await updateCurrentUserService({req,res},req.body);
+    if(user.hasOwnProperty("token")){
+      res.status(200).json({
+        statusCode: 200,
+        message: "Update Current User Successfuly",
+        verifyToken: user.token.verifyToken,
+        data: user.data,
+      })
+    }else{
+      res.status(200).json({
+        statusCode: 200,
+        message: "Update Current User Successfuly",
+        data: user
+      })
+    }
   } catch (error) {
     next(error);
   }

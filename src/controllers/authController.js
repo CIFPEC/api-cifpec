@@ -22,7 +22,7 @@ export async function register(req, res,next) {
 // login
 export async function login(req, res,next) {
   try {
-    const token = await loginService(res,req.body);
+    const token = await loginService({req,res},req.body);
     res.json({
       statusCode: 200,
       message: "Login successful. Welcome back!",
@@ -115,7 +115,7 @@ export async function requestCodeVerifyEmail(req, res, next) {
 export async function verifyEmail(req, res, next) {
   const verifyToken = req.headers["verify-token"];
   try {
-    const token = await verifyService(verifyToken, req.body, 'email_verification',res);
+    const token = await verifyService(verifyToken, req.body, 'email_verification',{req,res});
     res.status(200).json({
       statusCode: 200,
       message: "Email verified successfully",

@@ -1,7 +1,8 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import jwt from 'jsonwebtoken';
 import {Database, SessionModel} from "./../models/index.js";
-import { CreateAccessToken } from "../utils/helper.js";
+import { CreateAccessToken } from "./../utils/helper.js";
+import { withTransaction } from "./../utils/withTransaction.js";
 
 // renew access token
 export async function renewAccessTokenService(req,res) {
@@ -11,9 +12,7 @@ export async function renewAccessTokenService(req,res) {
       {header: "Authorization", message: "Required token"},
     ]);
   }
-
-  const transaction = await Database.transaction();
-  try {
+  return await withTransaction(async (transaction) => {
     // compare refresh token from client and database
     const checkRefreshToken = await SessionModel.findOne({where:{sessionToken:refreshToken}});
     if(!checkRefreshToken) {
@@ -21,7 +20,7 @@ export async function renewAccessTokenService(req,res) {
         {header: "Authorization", message: "Invalid token"},
       ]);
     }
-
+  
     /**
      * check refresh token is expired or not
      * if expired, delete refresh token
@@ -33,22 +32,16 @@ export async function renewAccessTokenService(req,res) {
         {header: "Authorization", message: "Token is expired"},
       ]);
     }
-
+  
     // verify refresh token
-    let token;
-    jwt.verify(refreshToken, process.env.SECRET_KEY, function(err, decoded) {
-      if(err) {
-        throw new ErrorHandler(403, "Forbidden",[
-          {header: "Authorization", message: "Invalid token"},
-        ]);
-      }
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY);
       // create access token
-      const AccessToken = CreateAccessToken({userId: decoded.userId,userEmail: decoded.userEmail,roleId: decoded.roleId, roleName: decoded.roleName});
-      token = AccessToken;
-    })
-    return token;
-  } catch (error) {
-    console.log("RENEW ACCESS TOKEN ERROR: ",error);
-    throw error;
-  }
+      return CreateAccessToken({ userId: decoded.userId, userEmail: decoded.userEmail, roleId: decoded.roleId, roleName: decoded.roleName });
+    } catch (error) {
+      throw new ErrorHandler(403, "Forbidden", [
+        { header: "Authorization", message: "Invalid token" },
+      ]);
+    }
+  }, { ERROR_MESSAGE: "RENEW ACCESS TOKEN ERROR" } );
 }

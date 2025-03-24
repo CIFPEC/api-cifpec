@@ -88,7 +88,7 @@ export async function registerService(userRequest) {
   }
 }
 // login
-export async function loginService(res,userRequest){
+export async function loginService({req,res},userRequest){
   let currentType;
   const transaction = await Database.transaction();
   try {
@@ -129,7 +129,7 @@ export async function loginService(res,userRequest){
     }
 
     // create access token
-    const AccessToken = await createAuthToken(res,user);
+    const AccessToken = await createAuthToken({req,res},user);
     
     // return access token
     await transaction.commit();
@@ -233,7 +233,7 @@ export async function resetService(token,user) {
  * **/
 
 // verify code email & code reset password
-export async function verifyService(token,user,type,res) {
+export async function verifyService(token,user,type,{req,res}) {
   let currentType = requestType(type);
 
   // get bearer token from header
@@ -298,7 +298,8 @@ export async function verifyService(token,user,type,res) {
       const result = getCodeWithToken({userId: verify.userId,userEmail: verify.verifyEmail}, currentType, {expired: 10});
       return result.token;
     }
-    return createAuthToken(res,userData);
+    // if verify register email
+    return createAuthToken({req,res},userData);
   } catch (error) {
     console.log("VERIFY ERROR: ",error);
     await transaction.rollback();

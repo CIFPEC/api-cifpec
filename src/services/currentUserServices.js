@@ -1,7 +1,10 @@
-import { ErrorHandler } from "../exceptions/errorHandler.js";
+import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { CourseModel, Database,RoleModel,SupervisorCourseModel,UserDetailModel,UserModel } from "../models/index.js";
-import { getRole } from "./../utils/helper.js";
+import { createVerifyResetToken } from "./../utils/createVerifyResetToken.js";
+import { getRole, requestType } from "./../utils/helper.js";
 import bcrypt from 'bcrypt';
+import { withTransaction } from "./../utils/withTransaction.js";
+import { createAuthToken } from "./../utils/createAuthToken.js";
 
 /**
  * ========
@@ -16,7 +19,7 @@ import bcrypt from 'bcrypt';
 
 
 // Get Current User
-export async function getCurrentUserService({req}){
+export async function getCurrentUserService({req},token = null){
   const roleId = getRole();
   let user;
   try {
@@ -104,6 +107,9 @@ export async function getCurrentUserService({req}){
     if (user.Profile.EnrolledCourse){
       data.userCourse = user.Profile.EnrolledCourse
     }
+    if(token !== null){
+      return { token,data };
+    }
 
     return data;
   } catch (error) {
@@ -113,27 +119,46 @@ export async function getCurrentUserService({req}){
 } 
 
 // Update Current User
-export async function updateCurrentUserService({req},requestData){
+export async function updateCurrentUserService({req,res},requestData){
+  let currentType = null;
   const { userEmail, userName, userUsername, userGender, userPhone, userProfileImage } = requestData;
   const updateData = { 
+    userEmail,
+    userName,
     userUsername, 
     userGender, 
     userPhone, 
     userProfileImage
   };
-
-  const transaction = await Database.transaction();
-  try {
-    await UserModel.update({userEmail,userName},{where:{id:req.user.userId}},{transaction});
-    await UserDetailModel.update(updateData,{where:{id:req.user.userId}},{transaction});
-
-    await transaction.commit();
-    return getCurrentUserService({req});
-  } catch (error) {
-    console.log("UPDATE CURRENT USER: ",error);
-    await transaction.rollback();
-    throw error;
+  if(userEmail){
+    if ((userEmail.toLowerCase()) !== (req.user.userEmail.toLowerCase())) {
+      currentType = requestType("email_verification");
+      updateData.isVerify = false;
+    }
   }
+
+  return await withTransaction(async (transaction) => {
+    await UserModel.update(updateData,{where:{id:req.user.userId},transaction});
+    await UserDetailModel.update(updateData,{where:{userId:req.user.userId},transaction});
+    
+    // check if user email changed 
+    if (userEmail) {
+      if (currentType !== null) {
+        const user = await UserModel.findOne({
+          attributes: {
+            exclude:["userPassword","role_id"]
+          },
+          where: {id:req.user.userId},
+          transaction
+        });
+        // send verify email 
+        await createAuthToken({req,res},user);
+        const VerifyToken = await createVerifyResetToken(user, currentType, transaction);
+        return getCurrentUserService({req}, VerifyToken);
+      }
+    }
+    return getCurrentUserService({req});    
+  }, { ERROR_MESSAGE:"UPDATE CURRENT USER"})
 }
 
 // Update Current User Password
