@@ -169,3 +169,9 @@ export const updateCurrentUserPasswordSchema = Joi.object({
       'any.required': 'Retype password is required.',
     }),
 });
+
+// Update Lecturer by ID(Admin Only)
+export const updateLecturerSchema = Joi.object({
+  isActive: Joi.boolean().optional(),
+  isApproved: Joi.boolean().optional(),
+})
