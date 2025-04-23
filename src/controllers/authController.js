@@ -23,11 +23,18 @@ export async function register(req, res,next) {
 export async function login(req, res,next) {
   try {
     const token = await loginService({req,res},req.body);
-    res.json({
-      statusCode: 200,
-      message: "Login successful. Welcome back!",
-      data: {token}
-    })
+    if(Array.isArray(token)){
+      res.json({
+        statusCode: 200,
+        message: "You're already logged in!",
+      })
+    }else{
+      res.json({
+        statusCode: 200,
+        message: "Login successful. Welcome back!",
+        data: {token}
+      })
+    }
   } catch (error) {
     next(error);
   }

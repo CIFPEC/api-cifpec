@@ -27,6 +27,7 @@ const Projects = Database.define("project",
     // - thumbnail
     projectThumbnail:{
       type: DataTypes.STRING,
+      defaultValue:null,
       field:"thumbnail"
     },
     // - supervisor_id

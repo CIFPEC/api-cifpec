@@ -4,6 +4,7 @@ import courses from "./courses.js";
 import batches from "./batches.js";
 import user from "./user.js";
 import users from "./users.js";
+import projects from "./projects.js";
 import { renewToken } from "./../../controllers/authController.js";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.use("/courses",courses);
 router.use("/batches",batches);
 router.use("/user", user);
 router.use("/users", users);
+router.use("/projects", projects);
 
 export default router;

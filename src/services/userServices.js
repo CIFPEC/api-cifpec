@@ -1,7 +1,7 @@
 import { withTransaction } from "./../utils/withTransaction.js";
 import { getRole } from './../utils/helper.js';
 import { Op } from "sequelize";
-import { CourseModel, ProjectModel, RoleModel, UserDetailModel, UserModel } from "./../models/index.js";
+import { CourseModel, ProjectModel, RoleModel, SupervisorCourseModel, UserDetailModel, UserModel } from "./../models/index.js";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 
 /**
@@ -256,6 +256,11 @@ export async function updateLecturerService({ req, res }) {
       { isApprove: isApproved, isLecturerActive: isActive },
       { where: { id: userId }, transaction }
     );
+
+    await SupervisorCourseModel.create({
+      courseId:user.Profile.EnrolledCourse.dataValues.courseId,
+      supervisorId:userId
+    },{transaction});
    
     user = await UserModel.findOne({
       attributes: {
