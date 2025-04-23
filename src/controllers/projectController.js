@@ -1,4 +1,4 @@
-import { createProjectService } from "./../services/projectServices.js";
+import { createProjectService, updateProjectService } from "./../services/projectServices.js";
 
 /**
  * ========
@@ -27,3 +27,17 @@ export async function createProject(req, res, next) {
     next(error);
   }
 } 
+
+// Update Project
+export async function updateProject(req, res, next){
+  try {
+    const project = await updateProjectService({req,res});
+    res.status(200).json({
+      statusCode: 200,
+      message: "Project has been updated!",
+      data: project
+    });
+  } catch (error) {
+    next(error);
+  }
+}

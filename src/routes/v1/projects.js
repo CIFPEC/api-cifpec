@@ -11,7 +11,7 @@ const router = express.Router();
  * --------
  * - Create Project
  * - Get all students in project (not final)
- * - Update Project
+ * - Update Project - in user.js
  * - Get all projects in batch
  * - Get project in batch by ID
  * - Get all projects (Archived)

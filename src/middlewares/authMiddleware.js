@@ -14,12 +14,7 @@ export function authMiddleware(req, res, next) {
         { header: "Authorization", message: "Invalid token" }
       ]));
     }
-    req.user = {
-      userId:decoded.userId,
-      userEmail:decoded.userEmail,
-      roleId:decoded.roleId,
-      roleName:decoded.roleName
-    };
+    req.user = decoded;
   });
   next();
 }

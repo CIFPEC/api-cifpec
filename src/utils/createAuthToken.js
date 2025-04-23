@@ -1,14 +1,60 @@
 import jwt from 'jsonwebtoken';
-import { RoleModel, SessionModel, UserModel } from './../models/index.js';
+import { BatchModel, CourseModel, RoleModel, SessionModel, UserDetailModel, UserModel } from './../models/index.js';
 import { CreateAccessToken } from './helper.js';
-import { renewAccessTokenService } from '../services/resfreshTokenService.js';
+
 // create refresh and access token
 export async function createAuthToken({req,res},user){
   try {
-    const Role = await RoleModel.findOne({where: {id: user.roleId},attributes: [["id","roleId"],["name","roleName"]]});
+    // const Role = await RoleModel.findOne({where: {id: user.roleId},attributes: [["id","roleId"],["name","roleName"]]});
+    const User = await UserModel.findOne({
+      attributes:[["id","userId"],"userEmail",],
+      include: [
+        {
+          model: RoleModel,
+          as: "Role",
+          required: true,
+          attributes: [["id", "roleId"], ["name", "roleName"]],
+        },
+        {
+          model: UserDetailModel,
+          as: "Profile",
+          required: true,
+          attributes: ["userId","courseId"],
+          include: [
+            {
+              model: CourseModel,
+              as: "EnrolledCourse",
+              attributes: [["id", "courseId"], ["name", "courseName"]],
+              include:[
+                {
+                  model:BatchModel,
+                  as:"coursesInBatch",
+                  attributes:[["id","batchId"],["name","batchName"]],
+                  through:{attributes:[]}
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      where:{id:user.id}
+    });
+    const { Profile, Role, ...userDetail } = User.toJSON();
+    const { EnrolledCourse } = Profile || {};
+    const { coursesInBatch } = EnrolledCourse || {};
+    const [ course ] = coursesInBatch || [];
+
     let AccessToken;
+    const prepareData = { 
+      ...userDetail,
+      roleId: Role.roleId, 
+      roleName: Role.roleName,
+      courseId: Profile.courseId,
+      batchId: course?.batchId || null 
+    }
+
     // create refresh token
-    const ResreshToken = jwt.sign({userId: user.id, userEmail: user.userEmail, roleId: Role.dataValues.roleId, roleName: Role.roleName}, process.env.SECRET_KEY, { expiresIn:"1d" });
+    const ResreshToken = jwt.sign(prepareData, process.env.SECRET_KEY, { expiresIn:"1d" });
     // check existing cookie token
     if (!req.cookies.token){
       // set cookies (http only)
@@ -19,7 +65,7 @@ export async function createAuthToken({req,res},user){
       })
 
       // create access token
-      AccessToken = CreateAccessToken({ userId: user.id, userEmail: user.userEmail, roleId: Role.dataValues.roleId, roleName: Role.roleName });
+      AccessToken = CreateAccessToken(prepareData);
 
       // create session
       await SessionModel.create({

@@ -36,8 +36,11 @@ export async function renewAccessTokenService(req,res) {
     // verify refresh token
     try {
       const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY);
+      delete decoded.iat;
+      delete decoded.exp;
+
       // create access token
-      return CreateAccessToken({ userId: decoded.userId, userEmail: decoded.userEmail, roleId: decoded.roleId, roleName: decoded.roleName });
+      return CreateAccessToken(decoded);
     } catch (error) {
       throw new ErrorHandler(403, "Forbidden", [
         { header: "Authorization", message: "Invalid token" },

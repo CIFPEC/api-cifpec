@@ -28,7 +28,7 @@ const Sessions = Database.define("session",
     },
     // - session_token(unique)
     sessionToken: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(512),
       allowNull: false,
       validate: {
         notNull: {

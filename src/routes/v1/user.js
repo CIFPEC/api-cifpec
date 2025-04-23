@@ -4,6 +4,7 @@ import { authMiddleware } from './../../middlewares/authMiddleware.js';
 import { validateBody } from './../../validations/validation.js';
 import { requestCodeSchema, updateCurrentUserPasswordSchema, updateCurrentUserSchema, verifySchema } from './../../validations/auth/userValidations.js';
 import { requestCodeVerifyEmail, verifyEmail } from './../../controllers/authController.js';
+import { updateProject } from '../../controllers/projectController.js';
 const router = express.Router();
 
 /**
@@ -24,4 +25,6 @@ router.patch("/profile/password",validateBody(updateCurrentUserPasswordSchema),a
 router.post("/profile/email/verify/request",validateBody(requestCodeSchema),authMiddleware, requestCodeVerifyEmail);
 router.post("/profile/email/verify",validateBody(verifySchema), verifyEmail);
 
+// Update Project
+router.patch("/projects/:projectId", authMiddleware, updateProject);
 export default router;

@@ -82,8 +82,8 @@ ProjectFieldValues.belongsTo(BatchFields, { foreignKey: "field_id" });
 
 Option B (Many-to-many)
 */
-Projects.belongsToMany(BatchFields,{through:ProjectFieldValues});
-BatchFields.belongsToMany(Projects,{through:ProjectFieldValues});
+Projects.belongsToMany(BatchFields,{through:ProjectFieldValues,foreignKey:"project_id",otherKey:"field_id"});
+BatchFields.belongsToMany(Projects,{through:ProjectFieldValues,foreignKey:"field_id",otherKey:"project_id"});
 
 
 /*

@@ -113,6 +113,7 @@ export async function getBatchService({ req }) {
             ["field_name", "label"],
             ["field_type", "type"],
             [Sequelize.literal("IF(is_required IS NOT NULL AND is_required = 1, TRUE, FALSE)"), "required"],
+            ["field_tag", "tag"]
           ],
         }
       ],
@@ -159,7 +160,8 @@ export async function getBatchService({ req }) {
         batch.projectRequirements.set(requirementKey, {
           label: row['projectRequirements.label'],
           type: row['projectRequirements.type'],
-          required: !!row['projectRequirements.required']
+          required: !!row['projectRequirements.required'],
+          tag: row['projectRequirements.tag']
         });
       }
     });
@@ -187,7 +189,6 @@ export async function getBatchService({ req }) {
     return result;
   } catch (error) {
     console.log("GET ALL BATCH ERROR: ",error);
-    console.log(error);
     throw error;
   }
 }
@@ -225,6 +226,7 @@ export async function createBatchService(batchRequest) {
         fieldName: field.label,
         fieldType: field.type,
         isRequired: field.required || false,
+        fieldTag: field.tag
       }));
 
       await BatchFieldModel.bulkCreate(batchFieldsData, { transaction });
@@ -244,7 +246,7 @@ export async function createBatchService(batchRequest) {
         {
           model: BatchFieldModel,
           as: "projectRequirements",
-          attributes: ["fieldName", "fieldType", "isRequired"],
+          attributes: ["fieldName", "fieldType", "isRequired","fieldTag"],
         },
       ]
     });
@@ -265,7 +267,8 @@ export async function createBatchService(batchRequest) {
       projectRequirements: newBatch.projectRequirements.map((field)=>({
         label: field.fieldName,
         type: field.fieldType,
-        required: field.isRequired
+        required: field.isRequired,
+        tag: field.fieldTag
       })),
     }
   } catch (error) {
@@ -368,7 +371,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
     // Handle Batch Fields (Project Requirements)
     const existingFields = await BatchFieldModel.findAll({
       where: { batchId },
-      attributes: ["id", "fieldName", "fieldType", "isRequired"]
+      attributes: ["id", "fieldName", "fieldType", "isRequired", "fieldTag"]
     });
 
     // relabel projectRequirements
@@ -376,6 +379,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
       fieldName: req.label,
       fieldType: req.type,
       isRequired: req.required || false, // set default value if user not set
+      fieldTag: req.tag
     }));
 
     // find data to delete
@@ -396,14 +400,14 @@ export async function updateBatchService({ req, res }, batchRequest) {
       newFields.some(
         (newField) =>
           newField.fieldName === field.fieldName &&
-          (newField.fieldType !== field.fieldType || newField.isRequired !== field.isRequired)
+          (newField.fieldType !== field.fieldType || newField.isRequired !== field.isRequired || newField.fieldTag !== field.fieldTag)
       )
     );
 
     for (const field of fieldsToUpdate) {
       const newField = newFields.find((nf) => nf.fieldName === field.fieldName);
       await BatchFieldModel.update(
-        { fieldType: newField.fieldType, isRequired: newField.isRequired },
+        { fieldType: newField.fieldType, isRequired: newField.isRequired, fieldTag: newField.fieldTag },
         { where: { id: field.id }, transaction }
       );
     }
@@ -420,6 +424,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
           fieldName: field.fieldName,
           fieldType: field.fieldType,
           isRequired: field.isRequired,
+          tag: field.fieldTag
         })),
         { transaction }
       );
@@ -436,7 +441,7 @@ export async function updateBatchService({ req, res }, batchRequest) {
         {
           model: BatchFieldModel,
           as: "projectRequirements",
-          attributes: ["fieldName", "fieldType", "isRequired"]
+          attributes: ["fieldName", "fieldType", "isRequired", "fieldTag"]
         }
       ],
       transaction
@@ -461,7 +466,8 @@ export async function updateBatchService({ req, res }, batchRequest) {
       projectRequirements: updatedBatch.projectRequirements.map((field) => ({
         label: field.fieldName,
         type: field.fieldType,
-        required: field.isRequired
+        required: field.isRequired,
+        tag: field.fieldTag
       })),
     }
   } catch (error) {

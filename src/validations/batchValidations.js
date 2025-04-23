@@ -41,6 +41,7 @@ export const createAndUpdateBatchSchema = Joi.object({
         required: Joi.boolean().optional().messages({
           "boolean.base": "Required must be a boolean",
         }),
+        tag: Joi.string().optional().messages(),
       })
     )
     .min(1)
