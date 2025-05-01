@@ -1,4 +1,4 @@
-import { createProjectService, updateProjectService } from "./../services/projectServices.js";
+import { createProjectService, getAllUserProjectService, updateProjectService } from "./../services/projectServices.js";
 
 /**
  * ========
@@ -26,7 +26,23 @@ export async function createProject(req, res, next) {
   } catch (error) {
     next(error);
   }
-} 
+}
+
+// Get all students in project (not final)
+export async function getAllProject(req, res, next){
+  try {
+    const projects = await getAllUserProjectService({req,res});
+    res.status(200).json({
+      statusCode:200,
+      message:"Get all projects successfuly!",
+      // data: projects.data || [],
+      // paginate: projects.paginate || {}
+      data: projects
+    })
+  } catch (error) {
+    next(error);
+  }
+}
 
 // Update Project
 export async function updateProject(req, res, next){

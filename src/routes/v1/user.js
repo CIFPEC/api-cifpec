@@ -4,7 +4,7 @@ import { authMiddleware } from './../../middlewares/authMiddleware.js';
 import { validateBody } from './../../validations/validation.js';
 import { requestCodeSchema, updateCurrentUserPasswordSchema, updateCurrentUserSchema, verifySchema } from './../../validations/auth/userValidations.js';
 import { requestCodeVerifyEmail, verifyEmail } from './../../controllers/authController.js';
-import { updateProject } from '../../controllers/projectController.js';
+import { getAllProject, updateProject } from '../../controllers/projectController.js';
 const router = express.Router();
 
 /**
@@ -27,4 +27,6 @@ router.post("/profile/email/verify",validateBody(verifySchema), verifyEmail);
 
 // Update Project
 router.patch("/projects/:projectId", authMiddleware, updateProject);
+// Get all students in project (not final)
+router.get("/projects", authMiddleware, getAllProject);
 export default router;

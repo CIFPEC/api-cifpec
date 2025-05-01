@@ -43,6 +43,10 @@ Sessions.belongsTo(Users, { foreignKey: "user_id", as: "User" });
 Projects.belongsTo(Courses, { foreignKey: "course_id", as: "ProjectCourse" });
 Courses.hasMany(Projects, { foreignKey: "course_id", as: "Projects" });
 
+// projects.supervisor_id > users.id
+Projects.belongsTo(Users, { foreignKey: "supervisor_id", as: "Supervisor" });
+Users.hasMany(Projects, { foreignKey: "supervisor_id", as: "SupervisedProjects" });
+
 // batches.id < projects.batch_id
 Projects.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
 Batches.hasMany(Projects, { foreignKey: "batch_id", as: "Projects" });
@@ -72,19 +76,18 @@ ProjectArchives.hasMany(ProjectValueArchives,{foreignKey:"project_id"});
 /*
 NOTE projects to batch_fields (many-to-many)
 ============================================
-Option A
-project_field_value.project_id < projects.id 
-ProjectFieldValues.belongsTo(Projects, { foreignKey: "project_id" });
-Projects.hasMany(ProjectFieldValues, { foreignKey: "project_id" });
-project_field_value.field_id < batch_fields.id
-BatchFields.hasMany(ProjectFieldValues, { foreignKey: "field_id" });
-ProjectFieldValues.belongsTo(BatchFields, { foreignKey: "field_id" });
-
-Option B (Many-to-many)
 */
-Projects.belongsToMany(BatchFields,{through:ProjectFieldValues,foreignKey:"project_id",otherKey:"field_id"});
-BatchFields.belongsToMany(Projects,{through:ProjectFieldValues,foreignKey:"field_id",otherKey:"project_id"});
 
+// project_field_value.project_id < projects.id 
+ProjectFieldValues.belongsTo(Projects, { foreignKey: "project_id",as:"Project" });
+Projects.hasMany(ProjectFieldValues, { foreignKey: "project_id",as:"ProjectFieldValues" });
+
+// batch_fields.id < project_field_value.field_id
+BatchFields.hasMany(ProjectFieldValues, { foreignKey: "field_id",as:"ProjectFieldValues" });
+ProjectFieldValues.belongsTo(BatchFields, { foreignKey: "field_id",as:"BatchField" });
+
+Projects.belongsToMany(BatchFields, { through: ProjectFieldValues, as:"BatchFields",foreignKey:"project_id",otherKey:"field_id"});
+BatchFields.belongsToMany(Projects,{through:ProjectFieldValues,as:"Projects",foreignKey:"field_id",otherKey:"project_id"}); 
 
 /*
 NOTE: users to courses (many-to-many)
@@ -120,18 +123,18 @@ Courses.belongsToMany(Batches, { through: BatchCourses, as: "coursesInBatch" ,on
 /* 
 NOTE: users to project (many-to-many)
 =====================================
-Option A
-users.id < project_members.user_id
-ProjectMembers.belongsTo(Users, { foreignKey: "user_id" });
-Users.hasMany(ProjectMembers, { foreignKey: "user_id" });
-projects.id > project_members.project_id
-ProjectMembers.belongsTo(Projects, { foreignKey: "project_id" });
-Projects.hasMany(ProjectMembers, { foreignKey: "project_id" });
-
-Option B (many-to-many) 
 */
-Projects.belongsToMany(Users,{through:ProjectMembers});
-Users.belongsToMany(Projects,{through:ProjectMembers});
+
+// users.id < project_members.user_id
+Users.hasMany(ProjectMembers, { foreignKey: "user_id", as: "ProjectMembers" });
+ProjectMembers.belongsTo(Users, { foreignKey: "user_id", as: "User" });
+
+// projects.id > project_members.project_id
+Projects.hasMany(ProjectMembers, { foreignKey: "project_id", as: "ProjectMembers" });
+ProjectMembers.belongsTo(Projects, { foreignKey: "project_id", as: "Project" });
+
+Projects.belongsToMany(Users,{through:ProjectMembers, as:"Teams",foreignKey:"project_id",otherKey:"user_id"});
+Users.belongsToMany(Projects,{through:ProjectMembers, as:"Projects",foreignKey:"user_id",otherKey:"project_id"});
 
 (async () => {
   if(+process.env.MIGRATE_TABLE){

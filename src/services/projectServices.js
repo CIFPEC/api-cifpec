@@ -1,5 +1,9 @@
+import { ErrorHandler } from "./../exceptions/errorHandler.js";
+import { getRole } from "./../utils/helper.js";
+import prepareProjectFields from "./../utils/prepareProjectFields.js";
+import { withTransaction } from "./../utils/withTransaction.js";
+import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel } from "./../models/index.js";
 /**
-import ProjectMembers from './../models/ProjectMemberModel';
  * ========
  * PROJECTS
  * --------
@@ -12,11 +16,6 @@ import ProjectMembers from './../models/ProjectMemberModel';
  * - Get project by ID (Archived)
  */
 
-import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { getRole } from "./../utils/helper.js";
-import prepareProjectFields from "./../utils/prepareProjectFields.js";
-import { withTransaction } from "./../utils/withTransaction.js";
-import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel } from "./../models/index.js";
 
 // Create Project
 export async function createProjectService({req,res}){
@@ -132,6 +131,132 @@ export async function createProjectService({req,res}){
     }
     return data;
   }, { ERROR_MESSAGE:"CREATE PROJECT SERVICE" });
+}
+
+// Get all students in project(not final)
+export async function getAllUserProjectService({req,res}){
+  return await withTransaction(async (transaction) => {
+    // check session batchId
+    if (!req.user.batchId && req.user.batchId === null) {
+      throw new ErrorHandler(403, "Forbidden", [
+        { token: "batchId", message: "Complete profile before accessing this resource." }
+      ])
+    }
+
+    // check session courseId
+    if (!req.user.courseId && req.user.courseId === null) {
+      throw new ErrorHandler(403, "Forbidden", [
+        { token: "courseId", message: "Complete profile before accessing this resource." }
+      ])
+    }
+    
+    // check session userId
+    if (!req.user.userId && req.user.userId === null) {
+      throw new ErrorHandler(403, "Forbidden", [
+        { token: "userId", message: "Complete profile before accessing this resource." }
+      ])
+    }
+    const userId = req.user.userId;
+
+    const userProjects = await UserModel.findOne({
+      where: { id: userId },
+      attributes:[],
+      include: [
+        {
+          model: ProjectMemberModel,
+          as: "ProjectMembers",
+          attributes: ["projectId", "userId"],
+          include: [
+            {
+              model: ProjectModel,
+              as: "Project",
+              attributes: [["id", "projectId"], "projectName", "projectThumbnail", "supervisorId", "isComplete", "createdAt"],
+              include: [
+                {
+                  model: UserModel,
+                  as: "Supervisor",
+                  attributes: [["id", "supervisorId"], ["name", "supervisorName"]] // get supervisor
+                },
+                {
+                  model: CourseModel,
+                  as: "ProjectCourse",
+                  attributes: [["id", "courseId"], ["name", "courseName"]], // get course
+                  include: [
+                    {
+                      model: UserModel,
+                      as: "Coordinator",
+                      attributes: [["id", "coordinatorId"], ["name", "coordinatorName"]] // get coordinator
+                    }
+                  ]
+                },
+                {
+                  model: BatchModel,
+                  as: "Batch",
+                  attributes: [["id", "batchId"], "batchName", "isFinal"] // get batch
+                },
+                {
+                  model: ProjectFieldValueModel,
+                  as: "ProjectFieldValues",
+                  attributes: ["fieldValue"],
+                  include: [
+                    {
+                      model: BatchFieldModel,
+                      as: "BatchField",
+                      attributes: ["fieldName"],
+                    }
+                  ],
+                },
+                {
+                  model: ProjectMemberModel,
+                  as: "ProjectMembers",
+                  attributes: ["projectId"],
+                  include: [
+                    {
+                      model: UserModel,
+                      as: "User",
+                      attributes: [["id", "userId"], "userName"]
+                    },
+                  ],
+                }
+              ],
+              order: [['created_at', 'DESC']],
+            }
+          ],
+        }
+      ],
+      transaction
+    });
+
+    const { ProjectMembers } = userProjects.toJSON();
+    const projects = ProjectMembers.map((project) => {
+      return {
+        projectId: project.Project.id,
+        projectName: project.Project.projectName,
+        supervisorId: project.Project.supervisorId,
+        supervisorName: project.Project.Supervisor?.supervisorName || null,
+        thumbnail: project.Project?.projectThumbnail || null,
+        coordinatorName: project.Project.ProjectCourse?.Coordinator?.coordinatorName || null,
+        batchName: project.Project.Batch.batchName,
+        isFinal: project.Project.Batch.isFinal,
+        isComplete: project.Project.isComplete,
+        createdAt: project.Project.createdAt,
+        requirements: project.Project.ProjectFieldValues.map((field) => {
+          return {
+            fieldName: field.BatchField.fieldName,
+            fieldValue: field.fieldValue,
+          };
+        }),
+        teams: project.Project.ProjectMembers.map((member) => {
+          return {
+            userId: member.User.userId,
+            userName: member.User?.userName || null,
+          };
+        }),
+      };
+    });
+    
+    return projects;
+  },{ERROR_MESSAGE:"GET ALL USER PROJECT"});
 }
 
 // Update Project

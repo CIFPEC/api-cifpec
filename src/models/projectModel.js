@@ -88,12 +88,20 @@ const Projects = Database.define("project",
       field:"is_complete"
     },
     // - created_at
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+      field:"created_at",
+    },
     // - updated_at
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+      field:"updated_at",
+    }
   },
   {
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    timestamps: true
   }
 );
 
