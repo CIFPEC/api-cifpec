@@ -1,7 +1,7 @@
 export function Create_Roles() {
   return [
     { roleName: "admin" },
-    { roleName: "web Maintenance" },
+    { roleName: "web maintenance" },
     { roleName: "coordinator" },
     { roleName: "supervisor" },
     { roleName: "student" },

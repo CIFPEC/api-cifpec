@@ -29,6 +29,7 @@ export async function renewAccessTokenService(req,res) {
       await SessionModel.destroy({where:{sessionToken:refreshToken}}, {transaction});
       res.clearCookie("token");
       throw new ErrorHandler(403, "Forbidden",[
+        {header: "Authorization", message: "Connection Timeout"},
         {header: "Authorization", message: "Token is expired"},
       ]);
     }

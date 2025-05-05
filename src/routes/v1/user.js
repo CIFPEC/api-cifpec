@@ -1,6 +1,6 @@
 import express from 'express';
 import { getCurrentUser, updateCurrentUser, updateCurrentUserPassword } from '../../controllers/currentUserController.js';
-import { authMiddleware } from './../../middlewares/authMiddleware.js';
+import { authMiddleware, isAdmin, isStudent } from './../../middlewares/authMiddleware.js';
 import { validateBody } from './../../validations/validation.js';
 import { requestCodeSchema, updateCurrentUserPasswordSchema, updateCurrentUserSchema, verifySchema } from './../../validations/auth/userValidations.js';
 import { requestCodeVerifyEmail, verifyEmail } from './../../controllers/authController.js';
@@ -20,13 +20,13 @@ const router = express.Router();
 
 // Get Current User
 router.get("/profile",authMiddleware, getCurrentUser);
-router.patch("/profile",validateBody(updateCurrentUserSchema),authMiddleware, updateCurrentUser);
-router.patch("/profile/password",validateBody(updateCurrentUserPasswordSchema),authMiddleware, updateCurrentUserPassword);
-router.post("/profile/email/verify/request",validateBody(requestCodeSchema),authMiddleware, requestCodeVerifyEmail);
-router.post("/profile/email/verify",validateBody(verifySchema), verifyEmail);
+router.patch("/profile" ,authMiddleware ,validateBody(updateCurrentUserSchema), updateCurrentUser);
+router.patch("/profile/password" ,authMiddleware ,validateBody(updateCurrentUserPasswordSchema), updateCurrentUserPassword);
+router.post("/profile/email/verify/request" ,authMiddleware ,validateBody(requestCodeSchema) ,requestCodeVerifyEmail);
+router.post("/profile/email/verify" ,authMiddleware, validateBody(verifySchema), verifyEmail);
 
+// Get all student projects
+router.get("/projects", authMiddleware, isStudent, getAllProject);
 // Update Project
-router.patch("/projects/:projectId", authMiddleware, updateProject);
-// Get all students in project (not final)
-router.get("/projects", authMiddleware, getAllProject);
+router.patch("/projects/:projectId", authMiddleware, isStudent, updateProject);
 export default router;

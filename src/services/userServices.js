@@ -253,9 +253,14 @@ export async function updateLecturerService({ req, res }) {
     }
     
     await UserModel.update(
-      { isApprove: isApproved, isLecturerActive: isActive },
+      { isAdminApprove: isApproved, isLecturerActive: isActive },
       { where: { id: userId }, transaction }
     );
+
+    await CourseModel.update(
+      { coordinatorId: userId },
+      { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
+    )
 
     await SupervisorCourseModel.create({
       courseId:user.Profile.EnrolledCourse.dataValues.courseId,

@@ -2,6 +2,7 @@ import express from 'express';
 import { createCourses, destroyCourseById, getAllCourses, getCourseById, updateCourseById } from './../../controllers/courseController.js';
 import { validateBody } from './../../validations/validation.js';
 import { createCourseSchema, updateCourseSchema } from './../../validations/courseValidations.js';
+import { authMiddleware, isAdmin } from '../../middlewares/authMiddleware.js';
 const router = express.Router();
 
 
@@ -20,15 +21,15 @@ const router = express.Router();
 router.get("/",getAllCourses);
 
 // Create Course
-router.post("/",validateBody(createCourseSchema),createCourses);
+router.post("/" ,authMiddleware ,isAdmin ,validateBody(createCourseSchema)  ,createCourses);
 
 // Get Course By Id
-router.get("/:id", getCourseById);
+router.get("/:id" ,authMiddleware ,isAdmin ,getCourseById);
 
 // Update Course
-router.patch("/:id", validateBody(updateCourseSchema),updateCourseById);
+router.patch("/:id", authMiddleware, isAdmin, validateBody(updateCourseSchema),updateCourseById);
 
 // Delete Course (Optional)
-router.delete("/:id", destroyCourseById);
+router.delete("/:id", authMiddleware, isAdmin, destroyCourseById);
 
 export default router;

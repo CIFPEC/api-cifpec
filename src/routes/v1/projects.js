@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from './../../middlewares/authMiddleware.js';
+import { authMiddleware, isStudent } from './../../middlewares/authMiddleware.js';
 import { validateBody } from './../../validations/validation.js';
 import { createProject } from './../../controllers/projectController.js';
 import { createProjectSchema } from './../../validations/projectValidations.js';
@@ -19,6 +19,6 @@ const router = express.Router();
  */
 
 // Create Project
-router.post("/",validateBody(createProjectSchema), authMiddleware, createProject);
+router.post("/" , authMiddleware, isStudent ,validateBody(createProjectSchema), authMiddleware, createProject);
 
 export default router;
