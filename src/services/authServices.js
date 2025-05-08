@@ -1,4 +1,4 @@
-import { Database,UserModel,CourseModel,UserDetailModel,VerifyModel,SessionModel } from "./../models/index.js";
+import { Database,UserModel,CourseModel,UserDetailModel,VerifyModel,SessionModel, BatchCourseModel } from "./../models/index.js";
 import { ErrorHandler } from './../exceptions/errorHandler.js';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -35,7 +35,9 @@ export async function registerService(userRequest) {
     const salt = await bcrypt.genSalt(10);
     userRequest.userPassword = await bcrypt.hash(userRequest.userPassword, salt);
 
-    if(userRequest.roleId === roleId.STUDENT){
+    // check if request role is exist in roleid
+    if(Object.values(roleId).includes(userRequest.roleId)) {
+      
       // check course
       const checkCourse = await CourseModel.findOne({where: {id: userRequest.courseId}});
       if(!checkCourse) {
@@ -43,6 +45,16 @@ export async function registerService(userRequest) {
           {field: "courseId", message: "Course not found!"},
         ]);
       }
+
+      // check if admin have create batch or not
+      const checkBatch = await BatchCourseModel.findOne({where: {courseId: userRequest.courseId}});
+      if(!checkBatch) {
+        throw new ErrorHandler(404, "Validation Error",[
+          {field: "batchId", message: "Please contact admin to create a new batch."},
+          {field: "batchId", message: "Batch not found!"},
+        ]);
+      }
+      
     }
   
     // create userRequest and userRequest details

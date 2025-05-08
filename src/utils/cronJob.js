@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { SessionModel, UserModel } from "./../models/index.js";
+import { SessionModel, UserModel, VerifyModel } from "./../models/index.js";
 
 async function deleteUserExpiredSession() {
   try {
@@ -42,9 +42,18 @@ async function deleteUserNotVerify() {
   }
 }
 
+async function clearVerifyTable() {
+  await VerifyModel.destroy({
+    where: {
+      createdAt: { [Op.lt]: new Date(Date.now() - 1000 * 60 * 60) } // get email who created 1 hour ago
+    }
+  });
+}
+
 async function startCronJob() {
   await deleteUserExpiredSession();
   await deleteUserNotVerify();
+  await clearVerifyTable();
 }
 
 setInterval(startCronJob, 1000 * 60 * 60 * 24); // run interval every 1 day
