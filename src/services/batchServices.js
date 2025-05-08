@@ -532,10 +532,12 @@ export async function getAllProjectByBatchService({ req, res }) {
         {
           model: ProjectFieldValueModel,
           as: "ProjectFieldValues",
+          attributes: ["fieldValue"],
           include: [
             {
               model: BatchFieldModel,
-              as: "BatchField"
+              as: "BatchField",
+              attributes: ["fieldName"]
             }
           ]
         },
@@ -591,4 +593,117 @@ export async function getAllProjectByBatchService({ req, res }) {
       data
     }
   }, { ERROR_MESSAGE: "GET ALL PROJECT BY BATCH" });
+}
+
+// get project in batch by id
+export async function getProjectInBatchByIdService({ req, res }) {
+  const batchId = parseInt(req.params.batchId) || null;
+
+  if (!batchId) {
+    throw new ErrorHandler(400, "Bad Request", [
+      { field: "batchId", message: "Batch ID is required!" }
+    ])
+  }
+
+  if (typeof (batchId) !== "number") {
+    throw new ErrorHandler(400, "Bad Request", [
+      { field: "batchId", message: "Batch ID must be a number!" }
+    ])
+  }
+
+  const projectId = parseInt(req.params.projectId) || null;
+
+  if (!projectId) {
+    throw new ErrorHandler(400, "Bad Request", [
+      { field: "projectId", message: "Project ID is required!" }
+    ])
+  }
+
+  if (typeof (projectId) !== "number") {
+    throw new ErrorHandler(400, "Bad Request", [
+      { field: "projectId", message: "Project ID must be a number!" }
+    ])
+  }
+
+  return await withTransaction(async (transaction) => {
+    const project = await ProjectModel.findOne({
+      where: {
+        id: projectId, 
+        batchId
+       },
+      include: [
+        {
+          model: UserModel,
+          as: "Supervisor",
+          attributes: ["id", "userName"]
+        },
+        {
+          model: BatchModel,
+          as: "Batch",
+          attributes: ["batchName", "isFinal"]
+        },
+        {
+          model: CourseModel,
+          as: "ProjectCourse",
+          include: [
+            {
+              model: UserModel,
+              as: "Coordinator",
+              attributes: ["id", "userName"]
+            }
+          ]
+        },
+        {
+          model: ProjectFieldValueModel,
+          as: "ProjectFieldValues",
+          attributes: ["fieldValue"],
+          include: [
+            {
+              model: BatchFieldModel,
+              as: "BatchField",
+              attributes: ["fieldName"]
+            }
+          ]
+        },
+        {
+          model: UserModel,
+          as: "Teams",
+          attributes: ["id", "userName"],
+          through: { attributes: [] },
+          // include: [
+          //   {
+          //     model: UserDetailModel,
+          //     as: "Profile",
+          //     attributes: ["username"]
+          //   }
+          // ]
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      transaction
+    });
+
+    const data = {
+      projectId: project.id,
+      projectName: project.projectName,
+      supervisorId: project.Supervisor?.id,
+      supervisorName: project.Supervisor?.userName,
+      thumbnail: project.projectThumbnail,
+      coordinatorName: project.ProjectCourse?.Coordinator?.userName || null,
+      createdAt: project.createdAt,
+      batchName: project.Batch?.batchName,
+      isFinal: project.Batch?.isFinal,
+      isComplate: project.isComplete,
+      requirements: project.ProjectFieldValues.map(field => ({
+        fieldName: field.BatchField.fieldName,
+        fieldValue: field.fieldValue,
+      })),
+      teams: project.Teams.map(member => ({
+        userId: member.id,
+        userName: member.userName
+      }))
+    };
+    
+    return data;
+  }, { ERROR_MESSAGE: "GET PROJECT IN BATCH BY ID" });
 }

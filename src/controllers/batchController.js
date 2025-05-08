@@ -1,4 +1,4 @@
-import { createBatchService, getAllProjectByBatchService, getBatchService, updateBatchService } from "./../services/batchServices.js";
+import { createBatchService, getAllProjectByBatchService, getBatchService, getProjectInBatchByIdService, updateBatchService } from "./../services/batchServices.js";
 
 /**
  * ========
@@ -87,9 +87,11 @@ export async function getAllProjectByBatch(req, res, next){
 // Get project in batch by ID
 export async function getProjectInBatchById(req, res, next){
   try {
+    const project = await getProjectInBatchByIdService({ req, res });
     res.status(200).json({
       statusCode: 200,
-      message: "Get project in batch successfuly!"
+      message: "Get project in batch successfuly!",
+      data: project
     })
   } catch (error) {
     next(error);
