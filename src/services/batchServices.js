@@ -1,7 +1,7 @@
-import e from "express";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database } from "./../models/index.js";
+import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database, ProjectModel, UserModel, ProjectFieldValueModel, UserDetailModel, ProjectMemberModel } from "./../models/index.js";
 import { Sequelize } from "sequelize";
+import { withTransaction } from "../utils/withTransaction.js";
 
 /**
  * ========
@@ -10,6 +10,9 @@ import { Sequelize } from "sequelize";
  * - Get all batches & get batch by id
  * - Create batch
  * - Update batch
+ * 
+ * - get all project by batch id
+ * - get project in batch by id
  */
 
 
@@ -476,4 +479,116 @@ export async function updateBatchService({ req, res }, batchRequest) {
     await transaction.rollback();
     throw error;
   }
+}
+
+// get all project by batch ID
+export async function getAllProjectByBatchService({ req, res }) {
+  let batchId = parseInt(req.params.batchId) || null;
+
+  if(!batchId){
+    throw new ErrorHandler(400, "Bad Request",[
+      { field:"batchId", message:"Batch ID is required!" }
+    ])
+  }
+
+  if(typeof(batchId) !== "number"){
+    throw new ErrorHandler(400, "Bad Request",[
+      { field:"batchId", message:"Batch ID must be a number!" }
+    ])
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  // set maximum limit is 20 
+  (limit > 20) ? limit = 20 : limit;
+  const offset = (page - 1) * limit;
+
+  return  await withTransaction(async (transaction) => {
+    const { count, rows: projects } = await ProjectModel.findAndCountAll({
+      where: { batchId },
+      include: [
+        {
+          model: UserModel,
+          as: "Supervisor",
+          attributes: ["id", "userName"]
+        },
+        {
+          model: BatchModel,
+          as: "Batch",
+          attributes: ["batchName", "isFinal"]
+        },
+        {
+          model: CourseModel,
+          as: "ProjectCourse",
+          include: [
+            {
+              model: UserModel,
+              as: "Coordinator",
+              attributes: ["id", "userName"]
+            }
+          ]
+        },
+        {
+          model: ProjectFieldValueModel,
+          as: "ProjectFieldValues",
+          include: [
+            {
+              model: BatchFieldModel,
+              as: "BatchField"
+            }
+          ]
+        },
+        {
+          model: UserModel,
+          as: "Teams",
+          attributes: ["id", "userName"],
+          through: { attributes: [] },
+          // include: [
+          //   {
+          //     model: UserDetailModel,
+          //     as: "Profile",
+          //     attributes: ["username"]
+          //   }
+          // ]
+        }
+      ],
+      limit,
+      offset,
+      order: [['created_at', 'DESC']],
+      transaction
+    });
+
+    const data = projects.map(project => {
+      return {
+        projectId: project.dataValues.id,
+        projectName: project.dataValues.projectName,
+        supervisorId: project.dataValues.Supervisor?.id,
+        supervisorName: project.dataValues.Supervisor?.userName,
+        thumbnail: project.dataValues.projectThumbnail,
+        coordinatorName: project.dataValues.ProjectCourse?.Coordinator?.userName || null,
+        createdAt: project.dataValues.createdAt,
+        batchName: project.dataValues.Batch?.batchName,
+        isFinal: project.dataValues.Batch?.isFinal,
+        isComplate: project.dataValues.isComplete,
+        requirements: project.dataValues.ProjectFieldValues.map(field => ({
+            fieldName: field.BatchField.fieldName,
+            fieldValue: field.fieldValue,
+        })),
+        teams: project.dataValues.Teams.map(member => ({
+          userId: member.id,
+          userName: member.userName
+        }))
+      };
+    });
+
+    return {
+      paginate: {
+        currentPage: page,
+        totalPage: Math.ceil(count / limit),
+        totalData: count
+      },
+      data
+    }
+  }, { ERROR_MESSAGE: "GET ALL PROJECT BY BATCH" });
 }

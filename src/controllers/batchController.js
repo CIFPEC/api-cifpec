@@ -1,4 +1,4 @@
-import { createBatchService, getBatchService, updateBatchService } from "./../services/batchServices.js";
+import { createBatchService, getAllProjectByBatchService, getBatchService, updateBatchService } from "./../services/batchServices.js";
 
 /**
  * ========
@@ -8,6 +8,9 @@ import { createBatchService, getBatchService, updateBatchService } from "./../se
  * - get batch by id
  * - Create batch
  * - Update batch
+ * 
+ * - get all project by batch id
+ * - get project in batch by id
  */
 
 
@@ -59,6 +62,34 @@ export async function updateBatchById(req,res,next){
       statusCode: 200,
       message: "Update batch successfuly!",
       data: batch
+    })
+  } catch (error) {
+    next(error);
+  }
+}
+
+// PUBLIC ROUTE
+// Get all project by batch id
+export async function getAllProjectByBatch(req, res, next){
+  try {
+    const projects = await getAllProjectByBatchService({req, res});
+    res.status(200).json({
+      statusCode:200,
+      message:"Get all project by batch successfuly!",
+      paginate: projects.paginate,
+      data: projects.data,
+    })
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Get project in batch by ID
+export async function getProjectInBatchById(req, res, next){
+  try {
+    res.status(200).json({
+      statusCode: 200,
+      message: "Get project in batch successfuly!"
     })
   } catch (error) {
     next(error);
