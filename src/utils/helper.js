@@ -3,6 +3,7 @@ import axios from "axios";
 import jwt from 'jsonwebtoken';
 import moment from "moment";
 import { geojs } from "./localMode.js";
+import fs from 'fs/promises';
 
 export function getRandomNumber(minimum, maximum) {
   const min = 10 ** (minimum - 1);
@@ -119,4 +120,13 @@ export function getRole(){
 export function CreateAccessToken({userId,userEmail,roleId,roleName,courseId,batchId}){
   const AccessToken = jwt.sign({ userId, userEmail, roleId, roleName, courseId, batchId }, process.env.ACCESS_KEY, { expiresIn:"20s" });
   return AccessToken;
+}
+
+export async function checkIfExists(path) {
+  try {
+    await fs.access(path);
+    return true; // Exist
+  } catch (err) {
+    return false; // Not exist
+  }
 }

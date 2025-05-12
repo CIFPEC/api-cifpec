@@ -17,7 +17,7 @@ import ProjectArchives from "./projectArchiveModel.js";
 import ProjectValueArchives from './ProjectValueArchiveModel.js';
 import SupervisorCourses from './supervisorCourseModel.js';
 import Sessions from "./sessionModel.js";
-import { Create_Roles, Create_Courses } from "./../utils/autoCreate.js";
+import { Create_Roles, Create_Courses, Create_DataSite } from "./../utils/autoCreate.js";
 
 // users.id - user_details.user_id
 Users.hasOne(UserDetails, { foreignKey: "user_id", as: "Profile" });
@@ -144,8 +144,10 @@ Users.belongsToMany(Projects,{through:ProjectMembers, as:"Projects",foreignKey:"
         await Database.sync({force: true});
         const ROLES = Create_Roles();
         const COURSES = Create_Courses();
+        const SITE = Create_DataSite();
         await Roles.bulkCreate(ROLES);
         await Courses.bulkCreate(COURSES);
+        await SiteDetails.create(SITE);
       }else{
         await Database.sync({force: false});
       }

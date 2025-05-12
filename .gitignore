@@ -1,5 +1,4 @@
-public/uploads/images/*
-public/uploads/videos/*
+public/uploads/*
 build/
 coverage/
 npm-debug.log

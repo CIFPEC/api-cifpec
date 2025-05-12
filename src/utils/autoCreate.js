@@ -18,3 +18,11 @@ export function Create_Courses() {
     { courseName: "Machine Learning" },
   ]
 }
+
+export function Create_DataSite() {
+  return { 
+      title: "My Portal",
+      textHeader: "Welcome to my portal",
+      description: "You can see many reference project here, we provide all PTA project here..."
+  }
+}

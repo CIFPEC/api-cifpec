@@ -32,11 +32,15 @@ const SiteDetails = Database.define("site_detail",
     // - description
     description: DataTypes.STRING,
     // - updated_at
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+      field:"updated_at"
+    }
   },
   {
     timestamps: true,
-    createdAt: false,
-    updatedAt: "updated_at",
+    createdAt: false
   }
 );
 
