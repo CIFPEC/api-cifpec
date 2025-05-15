@@ -2,7 +2,8 @@ import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { getRole } from "./../utils/helper.js";
 import prepareProjectFields from "./../utils/prepareProjectFields.js";
 import { withTransaction } from "./../utils/withTransaction.js";
-import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel } from "./../models/index.js";
+import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel } from "./../models/index.js";
+import { Op } from "sequelize";
 /**
  * ========
  * PROJECTS
@@ -98,11 +99,18 @@ export async function createProjectService({req,res}){
     let final = users.map((user) => ({
       userId: user.dataValues.userId,
       projectId: newProject.id
-      // userName: user.dataValues.userName
     }));
 
+    // filter user in teams
     final = final.filter((user) => teams.includes(user.userId));
 
+    // add user in project
+    final.push({
+      userId: req.user.userId,
+      projectId: newProject.id
+    })
+
+    // add user in project
     await ProjectMemberModel.bulkCreate(final,{transaction});
 
     // Fetch related data
@@ -338,4 +346,190 @@ export async function updateProjectService({req,res}){
   }, { ERROR_MESSAGE:"UPDATE PROJECT SERVICE" });
 }
 
+// move project to archive (NEW)
+export async function archiveProjectService({req,res}){
+  const projectId = req.params.projectId; // ambil dari route / request
 
+  return await withTransaction(async (transaction) => {
+    const project = await getProjectByIdService(projectId);
+    // const updatedProject = await ProjectModel.update(
+    // {
+    //   // isArchive: true,
+    //   isFinal: true
+    // }, 
+    // {
+    //   where: { id: projectId },
+    //   transaction
+    // });
+  
+    const createArchive = await ProjectArchiveModel.create(project, {transaction});
+    console.log("PROJECT: ", createArchive);
+    return;
+  }, { ERROR_MESSAGE:"ARCHIVE PROJECT SERVICE" });
+}
+
+// get project by id (NEW)
+export async function getProjectByIdService(projectId) {
+  if(!projectId){
+    console.log("ERROR: project id is required");
+    throw new ErrorHandler(500, "Internal Server Error");
+  }
+  return await withTransaction(async (transaction) => { 
+    const project = await ProjectModel.findOne({
+      where: { id: projectId },
+      attributes: ["id", "projectName", "projectThumbnail"],
+      include: [
+        {
+          model: UserModel,
+          as: "Supervisor",
+          attributes: ["id", "name"],
+        },
+        {
+          model: CourseModel,
+          as: "ProjectCourse",
+          attributes: {
+            include: [["created_at", "createdAt"]],
+            exclude: ["created_at", "updated_at", "coordinator_id"]
+          },
+          include: [
+            {
+              model: UserModel,
+              as: "Coordinator",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+        {
+          model: BatchModel,
+          as: "Batch",
+          attributes: ["id", "batchName", "isFinal"],
+        },
+        {
+          model: ProjectMemberModel,
+          as: "ProjectMembers",
+          include: [
+            {
+              model: UserModel,
+              as: "User",
+              attributes: ["id", "name"]
+            },
+          ],
+        },
+        {
+          model: ProjectFieldValueModel,
+          as: "ProjectFieldValues",
+          include: [
+            {
+              model: BatchFieldModel,
+              as: "BatchField"
+            }
+          ]
+        }
+      ],
+      transaction
+    });
+  
+    // check if project exist
+    if (!project) {
+      throw new ErrorHandler(400, "Bad Request", [
+        { field: "projectId", message: "Project not found" }
+      ])
+    }
+  
+    const { Supervisor, ProjectCourse, Batch, ProjectMembers, ProjectFieldValues, id, ...detailProject } = project.toJSON();
+    console.log("SUPERVISOR: ", Supervisor);
+    const data = {
+      projectId: id,
+      ...detailProject,
+      batchId: Batch.id,
+      batchName: Batch.batchName,
+      courseId: ProjectCourse?.id,
+      courseName: ProjectCourse?.courseName,
+      courseCoordinatorName: ProjectCourse?.Coordinator?.name,
+      courseSupervisorId: Supervisor.id,
+      courseSupervisorName: Supervisor.name,
+      projectCreatedAt: ProjectCourse?.createdAt,
+      projectRequirements: ProjectFieldValues.map((fieldValue) => ({
+        fieldName: fieldValue?.BatchField?.fieldName,
+        fieldValue: fieldValue?.fieldValue
+      })),
+      projectTeamMembers: ProjectMembers.map((member) => ({
+        userId: member.User.id,
+        userName: member.User.name
+      })),
+      isFinal: Batch.isFinal,
+    };
+    return data;
+  },{ERROR_MESSAGE:"GET PROJECT BY ID"})
+}
+
+
+// Get all projects (Archived)
+export async function getAllProjectService({req,res}){
+  const {name, batch, field, course} = req.query;
+
+  // check if request query
+  const page = parseInt(req.query.page) || 1;
+  let limit = parseInt(req.query.limit) || 5;
+  // set maximum limit is 20 
+  (limit > 20) ? limit = 20 : limit;
+
+  // Dynamic filters
+  const filters = {};
+
+  if (name) {
+    filters.projectName = {
+      [Op.like]: `%${name}%`
+    };
+  }
+
+  if (course) {
+    filters.courseId = course; // Assuming exact match
+  }
+
+  if (batch) {
+    filters.batchId = batch;
+   }
+
+  return await withTransaction(async (transaction) => {
+    // const projects = await ProjectArchiveModel.findAll({transaction});
+    const projects = await ProjectArchiveModel.paginate({
+      page, 
+      paginate: limit, 
+      where: filters, 
+      transaction
+    });
+    const result = {
+      paginate: {
+        currentPage: page,
+        totalPages: projects.pages,
+        totalItems: projects.total,
+      },
+      data: projects.docs
+    }
+    return result;
+  }, { ERROR_MESSAGE:"GET ALL PROJECTS SERVICE" });
+}
+
+// Get project by ID (Archived)
+export async function getProjectArchiveByIdService({req,res}){
+  const projectId = parseInt(req.params.projectId);
+  
+  if(!req.params.projectId){
+    throw new ErrorHandler(400, "Bad Request",[
+      { field:"projectId", message:"Project ID is required" }
+    ])
+  }
+
+  if (isNaN(projectId)){
+    throw new ErrorHandler(400, "Bad Request",[
+      { field:"projectId", message:"Project ID must be a number" }
+    ])
+  }
+
+  return await withTransaction(async (transaction) => {
+    // const projects = await ProjectArchiveModel.findAll({transaction});
+    const projects = await ProjectArchiveModel.findByPk(req.params.projectId,{transaction});
+    return projects;
+  }, { ERROR_MESSAGE:"GET PROJECT BY ID" });
+}

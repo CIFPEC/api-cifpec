@@ -65,50 +65,6 @@ const ProjectArchives = Database.define("project_archive",
       },
       field:"batch_name"
     },
-    // - batch_start_date
-    batchStartDate: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Batch Start Date is required!"
-        }
-      },
-      field:"batch_start_date"
-    },
-    // - batch_end_date
-    batchEndDate: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Batch End Date is required!"
-        }
-      },
-      field:"batch_end_date"
-    },
-    // - batch_created_at
-    batchCreatedAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Batch Created Date is required!"
-        }
-      },
-      field:"batch_created_at"
-    },
-    // - batch_last_update
-    batchLastUpdate: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      validate: {
-        notNull: {
-          msg: "Batch Last Update is required!"
-        }
-      },
-      field:"batch_last_update"
-    },
     // - course_id
     courseId: {
       type: DataTypes.BIGINT,

@@ -51,14 +51,22 @@ export function isWebMaintenance(req, res, next) {
   next();
 }
 
-export function customMiddleware(roles=[]) {
+export function customMiddleware({include=[], exclude=[]}) {
   return function (req, res, next){
-    // check if user role is in roles
-    if (!roles.includes(req.user.roleName)) {
-      return next(new ErrorHandler(403, "Forbidden",[
+    const userRole = req.user.roleName;
+
+    if (exclude.length > 0 && exclude.includes(userRole)) {
+      return next(new ErrorHandler(403, "Forbidden", [
         { header: "Authorization", message: "You are not authorized" }
       ]));
     }
-    next();
+
+    if (include.length > 0 && !include.includes(userRole)) {
+      return next(new ErrorHandler(403, "Forbidden", [
+        { header: "Authorization", message: "You are not authorized" }
+      ]));
+    }
+
+    return next();
   }
 }

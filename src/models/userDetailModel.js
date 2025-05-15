@@ -3,6 +3,7 @@ import Database from "./../config/database.js"
 import sequelizePaginate from "sequelize-paginate";
 import Users from "./userModel.js";
 import Courses from "./courseModel.js";
+import Batches from "./batchModel.js";
 
 const UserDetails = Database.define("user_detail",
   {
@@ -60,6 +61,18 @@ const UserDetails = Database.define("user_detail",
       onDelete: "NO ACTION",
       onUpdate: "CASCADE",
       field:"course_id"
+    },
+    // - batch_id
+    batchId: {
+      type: DataTypes.BIGINT,
+      defaultValue: null,
+      references: {
+        model: Batches,
+        key: "id"
+      },
+      onDelete: "NO ACTION",
+      onUpdate: "CASCADE",
+      field:"batch_id"
     },
     // - is_final
     isFinal: {

@@ -4,12 +4,33 @@ export default function prepareProjectFields({ batchFields, requirements, projec
   const errors = [];
   const valuesToInsert = [];
 
+  const validators = {
+    email: (val) => /^\S+@\S+\.\S+$/.test(val),
+    number: (val) => !isNaN(val),
+    url: (val) => {
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    phone: (val) => /^[0-9+\-\s]{7,15}$/.test(val),
+    date: (val) => !isNaN(Date.parse(val)),
+    text: (val) => typeof val === 'string' && val.trim() !== '',
+  };
+  
   for (const field of batchFields) {
     const tag = field.fieldTag;
-    const value = requirements[tag];
+    let value = requirements[tag];
+
+    // Auto trim string (if string type)
+    if (typeof value === 'string') {
+      value = value.trim(); 
+    }
 
     // Required check
-    if (field.isRequired && (!value || value === "")) {
+    if (field.isRequired && (value === undefined || value === null || value === "")) {
       errors.push({
         field: tag,
         message: `${tag} is required`
@@ -18,24 +39,14 @@ export default function prepareProjectFields({ batchFields, requirements, projec
     }
 
     // Type check
-    if (value !== undefined && value !== "") {
-      switch (field.fieldType) {
-        case "email":
-          if (!/^\S+@\S+\.\S+$/.test(value)) {
-            errors.push({
-              field: tag,
-              message: `${tag} must be a valid email`
-            });
-          }
-          break;
-        case "number":
-          if (isNaN(value)) {
-            errors.push({
-              field: tag,
-              message: `${tag} must be a number`
-            });
-          }
-          break;
+    if (value !== undefined && value !== "" && validators[field.fieldType]) {
+      const isValid = validators[field.fieldType](value);
+      if (!isValid) {
+        errors.push({
+          field: tag,
+          message: `${tag} must be a valid ${field.fieldType}`,
+        });
+        continue;
       }
     }
 
@@ -49,6 +60,7 @@ export default function prepareProjectFields({ batchFields, requirements, projec
     }
   }
 
+  // Final error check
   if (errors.length > 0) {
     const errorField = errors.map(item => item.field).join(", ");
     throw new ErrorHandler(400, "Bad Request", [

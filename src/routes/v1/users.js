@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware, isAdmin } from './../../middlewares/authMiddleware.js';
+import { authMiddleware, customMiddleware, isAdmin } from './../../middlewares/authMiddleware.js';
 import { getAllLecturer, getAllStudent, updateLecturer } from './../../controllers/userController.js';
 import { validateBody } from './../../validations/validation.js';
 import { updateLecturerSchema } from './../../validations/auth/userValidations.js';
@@ -17,7 +17,7 @@ const router = express.Router();
  */
 
 router.get("/lecturers", authMiddleware, isAdmin, getAllLecturer);
-router.patch("/:userId/lecturers", authMiddleware, isAdmin , validateBody(updateLecturerSchema), updateLecturer);
+router.patch("/:userId/lecturers", authMiddleware, customMiddleware({exclude: ["student"]}) , validateBody(updateLecturerSchema), updateLecturer);
 router.get("/students", authMiddleware, getAllStudent);
 
 export default router;

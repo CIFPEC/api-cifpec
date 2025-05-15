@@ -23,6 +23,10 @@ import { Create_Roles, Create_Courses, Create_DataSite } from "./../utils/autoCr
 Users.hasOne(UserDetails, { foreignKey: "user_id", as: "Profile" });
 UserDetails.belongsTo(Users, { foreignKey: "user_id", as: "User" });
 
+// user_details.batch_id > batches.id
+UserDetails.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
+Batches.hasMany(UserDetails, { foreignKey: "batch_id", as: "StudentsInBatch" });
+
 // users.role_id > roles.id
 Roles.hasMany(Users, { foreignKey: "role_id", as: "Users" });
 Users.belongsTo(Roles, { foreignKey: "role_id", as: "Role" });
@@ -107,16 +111,16 @@ Users.belongsToMany(Courses,{through:SupervisorCourses,as:"Courses",foreignKey:"
 
 /* NOTE: batches to courses (many-to-many)
 ==========================================
-Option A
-batches.id < batch_courses.batch_id
-BatchCourses.belongsTo(Batches, { foreignKey: "batch_id" });
-Batches.hasMany(BatchCourses, { foreignKey: "batch_id" });
-courses.id < batch_courses.course_id
+*/ 
+// Option A
+// batches.id < batch_courses.batch_id
+BatchCourses.belongsTo(Batches, { foreignKey: "batch_id", as: "Batch" });
+Batches.hasMany(BatchCourses, { foreignKey: "batch_id", as: "BatchCourses" });
+// courses.id < batch_courses.course_id
 BatchCourses.belongsTo(Courses, { foreignKey: "course_id" });
 Courses.hasMany(BatchCourses, { foreignKey: "course_id" });
 
-Option B (many-to-many)
-*/ 
+// Option B (many-to-many)
 Batches.belongsToMany(Courses, { through: BatchCourses, as: "batchCourses" ,onDelete: "CASCADE", onUpdate: "CASCADE" });
 Courses.belongsToMany(Batches, { through: BatchCourses, as: "coursesInBatch" ,onDelete: "CASCADE", onUpdate: "CASCADE" });
 

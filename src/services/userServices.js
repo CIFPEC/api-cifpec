@@ -201,116 +201,230 @@ export async function getAllStudentService({req,res}) {
 export async function updateLecturerService({ req, res }) {
   const { userId } = req.params;
   const { isApproved, isActive } = req.body;
-
   const ROLE = getRole();
+
+  
   // exclude Student in ROLE
   delete ROLE.STUDENT;
-
-  return await withTransaction(async (transaction) => {
-    let user = await UserModel.findOne({
-      attributes: {
-        include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
-        exclude: ["id", "userPassword", "role_id", "roleId",, "createdAt", "updatedAt"],
-      },
-      include: [
-        {
-          model: RoleModel,
-          as: "Role",
-          required: true,
-          attributes: [["id", "roleId"], ["name", "roleName"]],
+  
+  // check role user request
+  if (req.user.roleId === ROLE.ADMIN) {
+    return await withTransaction(async (transaction) => {
+      let user = await UserModel.findOne({
+        attributes: {
+          include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          exclude: ["id", "userPassword", "role_id", "roleId",, "createdAt", "updatedAt"],
         },
-        {
-          model: UserDetailModel,
-          as: "Profile",
-          required: true,
-          attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
-          include: [
-            {
-              model: CourseModel,
-              as: "EnrolledCourse",
-              required: true,
-              attributes: [["id", "courseId"], ["name", "courseName"]],
-            }
-          ]
-        }
-      ],
-      where: { 
-        id: userId, 
-        isVerify: true
-      },
-    });
-
-    if (!user) {
-      throw new ErrorHandler(404, "Not Found", [
-        { parameter: "userId", message: "User not found" },
-      ]);
-    }
-
-    if (Object.values(ROLE).includes(user.roleId)) {
-      throw new ErrorHandler(400, "Bad Request", [
-        { parameter: "userId", message: "User cannot be updated" },
-      ]);
-    }
-    
-    await UserModel.update(
-      { isAdminApprove: isApproved, isLecturerActive: isActive },
-      { where: { id: userId }, transaction }
-    );
-
-    await CourseModel.update(
-      { coordinatorId: userId },
-      { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
-    )
-
-    await SupervisorCourseModel.create({
-      courseId:user.Profile.EnrolledCourse.dataValues.courseId,
-      supervisorId:userId
-    },{transaction});
-   
-    user = await UserModel.findOne({
-      attributes: {
-        include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
-        exclude: ["id", "userPassword", "role_id", "roleId", , "createdAt", "updatedAt"],
-      },
-      include: [
-        {
-          model: RoleModel,
-          as: "Role",
-          required: true,
-          attributes: [["id", "roleId"], ["name", "roleName"]],
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            required: true,
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            required: true,
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            include: [
+              {
+                model: CourseModel,
+                as: "EnrolledCourse",
+                required: true,
+                attributes: [["id", "courseId"], ["name", "courseName"]],
+              }
+            ]
+          }
+        ],
+        where: { 
+          id: userId, 
+          isVerify: true,
+          isLecturerRequest: true
         },
-        {
-          model: UserDetailModel,
-          as: "Profile",
-          required: true,
-          attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
-          include: [
-            {
-              model: CourseModel,
-              as: "EnrolledCourse",
-              required: true,
-              attributes: [["id", "courseId"], ["name", "courseName"]],
-            }
-          ]
-        }
-      ],
-      where: {
-        id: userId,
-        isVerify: true
-      },
-      transaction
-    });
-    
-    const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
-    const { EnrolledCourse, ...restProfile } = Profile || {};
+      });
+  
+      if (!user) {
+        throw new ErrorHandler(404, "Not Found", [
+          { parameter: "userId", message: "User not found or profile is incomplete" },
+        ]);
+      }
+  
+      const roleId = user.Role.dataValues.roleId;
+      if (!Object.values(ROLE).includes(roleId)) {
+        throw new ErrorHandler(400, "Bad Request", [
+          { parameter: "userId", message: "User cannot be updated" },
+        ]);
+      }
+      if(req.body.hasOwnProperty("isApproved")){
+        await UserModel.update(
+          { isAdminApprove: isApproved, isLecturerActive: true },
+          { where: { id: userId }, transaction }
+        );
 
-    return {
-      ...rest,
-      ...restProfile,
-      userRole: Role,
-      userCourse: EnrolledCourse
-    };
-  }, { ERROR_MESSAGE: "UPDATE LECTURER" });
+        await CourseModel.update(
+          { coordinatorId: userId },
+          { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
+        )
+    
+        await SupervisorCourseModel.create({
+          courseId:user.Profile.EnrolledCourse.dataValues.courseId,
+          supervisorId:userId
+        },{transaction});
+      }else if(req.body.hasOwnProperty("isActive")){
+        await UserModel.update(
+          { isLecturerActive: isActive },
+          { where: { id: userId }, transaction }
+        );
+      }
+     
+      user = await UserModel.findOne({
+        attributes: {
+          include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          exclude: ["id", "userPassword", "role_id", "roleId", , "createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            required: true,
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            required: true,
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            include: [
+              {
+                model: CourseModel,
+                as: "EnrolledCourse",
+                required: true,
+                attributes: [["id", "courseId"], ["name", "courseName"]],
+              }
+            ]
+          }
+        ],
+        where: {
+          id: userId,
+          isVerify: true
+        },
+        transaction
+      });
+      
+      const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
+      const { EnrolledCourse, ...restProfile } = Profile || {};
+  
+      return {
+        ...rest,
+        ...restProfile,
+        userRole: Role,
+        userCourse: EnrolledCourse
+      };
+    }, { ERROR_MESSAGE: "UPDATE LECTURER" });
+  }else if(Object.values(ROLE).includes(req.user.roleId)){
+    // if not admin required request query 'request=true'
+    if(!req.query.request || req.query.request !== "true" ){
+      throw new ErrorHandler(403, "Forbidden", [
+        { header: "Authorization", message: "You are not authorized" }
+      ])
+    }
+    return await withTransaction(async (transaction) => {
+      let user = await UserModel.findOne({
+        attributes: {
+          include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          exclude: ["id", "userPassword", "role_id", "roleId", , "createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            required: true,
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            required: true,
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            include: [
+              {
+                model: CourseModel,
+                as: "EnrolledCourse",
+                required: true,
+                attributes: [["id", "courseId"], ["name", "courseName"]],
+              }
+            ]
+          }
+        ],
+        where: {
+          id: req.user.userId,
+          isVerify: true
+        },
+      });
+
+      if (!user) {
+        throw new ErrorHandler(404, "Not Found", [
+          { parameter: "userId", message: "User not found" },
+        ]);
+      }
+
+      if (!Object.values(ROLE).includes(req.user.roleId)) {
+        throw new ErrorHandler(400, "Bad Request", [
+          { parameter: "userId", message: "User cannot be updated" },
+        ]);
+      }
+
+      await UserModel.update(
+        { isLecturerRequest: true },
+        { where: { id: req.user.userId }, transaction }
+      );
+
+      user = await UserModel.findOne({
+        attributes: {
+          include: [["id", "userId"], ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          exclude: ["id", "userPassword", "role_id", "roleId", , "createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: RoleModel,
+            as: "Role",
+            required: true,
+            attributes: [["id", "roleId"], ["name", "roleName"]],
+          },
+          {
+            model: UserDetailModel,
+            as: "Profile",
+            required: true,
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            include: [
+              {
+                model: CourseModel,
+                as: "EnrolledCourse",
+                required: true,
+                attributes: [["id", "courseId"], ["name", "courseName"]],
+              }
+            ]
+          }
+        ],
+        where: {
+          id: req.user.userId,
+          isVerify: true
+        },
+        transaction
+      });
+
+      const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
+      const { EnrolledCourse, ...restProfile } = Profile || {};
+
+      return {
+        ...rest,
+        ...restProfile,
+        userRole: Role,
+        userCourse: EnrolledCourse
+      };
+    }, { ERROR_MESSAGE: "UPDATE LECTURER" });
+  }
 }
 
 // Get all students (in batch and course)

@@ -1,4 +1,4 @@
-import { Database,UserModel,CourseModel,UserDetailModel,VerifyModel,SessionModel, BatchCourseModel } from "./../models/index.js";
+import { Database,UserModel,CourseModel,UserDetailModel,VerifyModel,SessionModel, BatchCourseModel, BatchModel } from "./../models/index.js";
 import { ErrorHandler } from './../exceptions/errorHandler.js';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -36,6 +36,7 @@ export async function registerService(userRequest) {
     userRequest.userPassword = await bcrypt.hash(userRequest.userPassword, salt);
 
     // check if request role is exist in roleid
+    delete roleId.ADMIN;
     if(Object.values(roleId).includes(userRequest.roleId)) {
       
       // check course
@@ -54,7 +55,24 @@ export async function registerService(userRequest) {
           {field: "batchId", message: "Batch not found!"},
         ]);
       }
-      
+
+      const latestBatch = await BatchModel.findOne({
+        include: [{
+          model: BatchCourseModel,
+          as: "BatchCourses", 
+          where: { courseId: userRequest.courseId }
+        }],
+        where: { isFinal: false },
+        order: [["created_at", "DESC"]],
+      });
+
+      if(!latestBatch) {
+        throw new ErrorHandler(404, "Validation Error",[
+          {field: "batchId", message: "Please contact admin to create a new batch."},
+          {field: "batchId", message: "Batch not found!"},
+        ]);
+      }
+      userRequest.batchId = latestBatch.id;
     }
   
     // create userRequest and userRequest details
@@ -71,6 +89,7 @@ export async function registerService(userRequest) {
       await UserDetailModel.create({
         userId: userCreated.id,
         courseId: userRequest.courseId,
+        batchId: userRequest.batchId
       },
       {
         transaction

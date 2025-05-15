@@ -19,7 +19,7 @@ export async function createAuthToken({req,res},user){
           model: UserDetailModel,
           as: "Profile",
           required: true,
-          attributes: ["userId","courseId"],
+          attributes: ["userId","courseId","batchId"],
           include: [
             {
               model: CourseModel,
@@ -49,8 +49,8 @@ export async function createAuthToken({req,res},user){
       ...userDetail,
       roleId: Role.roleId, 
       roleName: Role.roleName,
-      courseId: Profile.courseId,
-      batchId: course?.batchId || null 
+      courseId: Profile?.courseId,
+      batchId: Profile?.batchId || null 
     }
 
     // create refresh token

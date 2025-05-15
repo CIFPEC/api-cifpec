@@ -1,7 +1,7 @@
 import express from 'express';
 import { authMiddleware, isStudent } from './../../middlewares/authMiddleware.js';
 import { validateBody } from './../../validations/validation.js';
-import { createProject } from './../../controllers/projectController.js';
+import { archiveProject, createProject, getAllProjectArchive, getProjectArchiveById } from './../../controllers/projectController.js';
 import { createProjectSchema } from './../../validations/projectValidations.js';
 const router = express.Router();
 
@@ -20,5 +20,14 @@ const router = express.Router();
 
 // Create Project
 router.post("/" , authMiddleware, isStudent ,validateBody(createProjectSchema), authMiddleware, createProject);
+
+// Get all projects (Archived)
+router.get("/", getAllProjectArchive);
+
+// Get project by ID(Archived)
+router.get("/:projectId", getProjectArchiveById);
+
+// move project to archive (NEW)
+router.patch("/:projectId/archive", archiveProject);
 
 export default router;
