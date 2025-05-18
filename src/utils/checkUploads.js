@@ -1,40 +1,57 @@
 import { ErrorHandler } from "../exceptions/errorHandler.js";
 import fs from "fs/promises";
 
-export default function checkUploads(fieldName = [],func) {
-  // check if parameter fieldName is array
-  if(fieldName && !Array.isArray(fieldName)){
-    console.log("ERROR: ", "Parameter fieldName must be an array");
-    throw new ErrorHandler(500, "Internal Server Error");
-  }
-
+export default function checkUploads(fieldName = [], func = null, normalizeField = null) {
   // filter files.fieldname in fieldName
   return async (req,res,next) => {
+    let allowedFields = fieldName;
+
+    if (typeof fieldName === 'function') {
+      allowedFields = fieldName(req) || [];
+    }
+
+    if (allowedFields && !Array.isArray(allowedFields)) {
+      console.log("ERROR: ", "Parameter fieldName must be an array");
+      throw new ErrorHandler(500, "Internal Server Error");
+    }
+
     const files = req.files;
-    if(files && files.length > 0 && fieldName.length > 0) {
+    if(files && files.length > 0 && allowedFields.length > 0) {
       /** 
        * collect all file want to remove
        * unlink files before remove
        * remove files.fieldname not in fieldName 
       */
       const removeFiles = [];
+      
       for (const file of files) {
-        if (!fieldName.includes(file.fieldname)) {
+        const cleaned = normalizeField
+          ? normalizeField(file.fieldname)
+          : file.fieldname;
+
+        if (!allowedFields.includes(cleaned)) {
           removeFiles.push(file);
         }
       }
+
       for (const file of removeFiles) {
         await fs.unlink(file.path);
       }
-      req.files = files.filter(file => fieldName.includes(file.fieldname));
+
+      req.files = files.filter(file => {
+        const cleaned = normalizeField
+          ? normalizeField(file.fieldname)
+          : file.fieldname;
+
+        return allowedFields.includes(cleaned);
+      });
     }
 
     // check if parameter func is function
-    if (typeof func !== "function") {
-      console.log("ERROR: ", "Parameter func must be a function");
-      throw new ErrorHandler(500, "Internal Server Error");
+    if (func && typeof func === "function") {
+      return func(req, res, next);
     }
 
-    func(req,res,next);
-  }
+    next();
+  };
 }

@@ -1,6 +1,6 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 
-export default function prepareProjectFields({ batchFields, requirements, projectId }) {
+export default function prepareProjectFields({ batchFields, requirements, projectId, files = [] }) {
   const errors = [];
   const valuesToInsert = [];
 
@@ -24,6 +24,19 @@ export default function prepareProjectFields({ batchFields, requirements, projec
     const tag = field.fieldTag;
     let value = requirements[tag];
 
+    // File support
+    if (field.fieldType === "file") {
+      const uploadedFile = files.find(f => f.fieldname === `requirements[${tag}]`);
+      if (field.isRequired && !uploadedFile) {
+        errors.push({ field: tag, message: `${tag} file is required` });
+        continue;
+      }
+      if (uploadedFile && uploadedFile.path) {
+        const relativePath = uploadedFile.path.split("public")[1];
+        value = relativePath ? relativePath.replace(/\\/g, "/") : null;
+      }
+    }
+
     // Auto trim string (if string type)
     if (typeof value === 'string') {
       value = value.trim(); 
@@ -38,15 +51,18 @@ export default function prepareProjectFields({ batchFields, requirements, projec
       continue;
     }
 
-    // Type check
-    if (value !== undefined && value !== "" && validators[field.fieldType]) {
-      const isValid = validators[field.fieldType](value);
-      if (!isValid) {
-        errors.push({
-          field: tag,
-          message: `${tag} must be a valid ${field.fieldType}`,
-        });
-        continue;
+    // Skip type check for file
+    if (field.fieldType !== "file") {
+      // Type check
+      if (value !== undefined && value !== "" && validators[field.fieldType]) {
+        const isValid = validators[field.fieldType](value);
+        if (!isValid) {
+          errors.push({
+            field: tag,
+            message: `${tag} must be a valid ${field.fieldType}`,
+          });
+          continue;
+        }
       }
     }
 

@@ -5,6 +5,9 @@ import { validateBody } from './../../validations/validation.js';
 import { requestCodeSchema, updateCurrentUserPasswordSchema, updateCurrentUserSchema, verifySchema } from './../../validations/auth/userValidations.js';
 import { requestCodeVerifyEmail, verifyEmail } from './../../controllers/authController.js';
 import { getAllProject, updateProject } from '../../controllers/projectController.js';
+import { uploadFile } from './../../utils/uploader.js';
+import checkUploads from './../../utils/checkUploads.js';
+import resolveUploadFields from './../../middlewares/resolveUploadFields.js';
 const router = express.Router();
 
 /**
@@ -28,5 +31,12 @@ router.post("/profile/email/verify" ,authMiddleware, validateBody(verifySchema),
 // Get all student projects
 router.get("/projects", authMiddleware, isStudent, getAllProject);
 // Update Project
-router.patch("/projects/:projectId", authMiddleware, isStudent, updateProject);
+router.patch("/projects/:projectId", authMiddleware, isStudent, resolveUploadFields, uploadFile("project-files").any(), checkUploads(
+  req => req.batchFields, 
+  null,
+  (fieldname) => {
+    const match = /^requirements\[(.+)\]$/.exec(fieldname);
+    return match ? match[1] : fieldname;
+  }
+ ), updateProject);
 export default router;
