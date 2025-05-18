@@ -1,4 +1,5 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
+import path from 'path';
 
 export default function prepareProjectFields({ batchFields, requirements, projectId, files = [] }) {
   const errors = [];
@@ -32,8 +33,9 @@ export default function prepareProjectFields({ batchFields, requirements, projec
         continue;
       }
       if (uploadedFile && uploadedFile.path) {
-        const relativePath = uploadedFile.path.split("public")[1];
-        value = relativePath ? relativePath.replace(/\\/g, "/") : null;
+        // const relativePath = uploadedFile.path.split("public")[1];
+        // value = relativePath ? relativePath.replace(/\\/g, "/") : null;
+        value = uploadedFile.filename;
       }
     }
 

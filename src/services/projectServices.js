@@ -1,10 +1,12 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { getRole } from "./../utils/helper.js";
+import { checkIfExists, getRole } from "./../utils/helper.js";
 import prepareProjectFields from "./../utils/prepareProjectFields.js";
 import { withTransaction } from "./../utils/withTransaction.js";
 import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel } from "./../models/index.js";
 import { Op } from "sequelize";
 import fs from 'fs/promises';
+import path from "path";
+import { deleteReplacedProjectFiles } from "./../utils/deleteReplacedProjectFiles.js";
 /**
  * ========
  * PROJECTS
@@ -296,11 +298,10 @@ export async function getAllUserProjectService({req,res}){
 export async function updateProjectService({req,res}){
   return await withTransaction(async (transaction) => {
     try {
-        // get project ID from params
+      // get project ID from params
       const { projectId } = req.params;
       // find project
       const project = await ProjectModel.findByPk(projectId,{transaction});
-      
       // check if project exist
       if(!project){
         throw new ErrorHandler(400, "Bad Request",[
@@ -332,10 +333,37 @@ export async function updateProjectService({req,res}){
       // prepare data and check dataType,isRequired
       const validateData = prepareProjectFields({
         batchFields,
-        requirements: req.body.requirements,
+        requirements: req.body.requirements || {},
         projectId,
         files: req.files || []
       });
+
+      // check if data is valid
+      await deleteReplacedProjectFiles({
+        projectId,
+        batchFields,
+        newValues: validateData,
+        transaction
+      });
+            
+      // get projectThumbnail
+      const thumbnailFile = req.files.find(f => f.fieldname === "projectThumbnail");
+      // check existing thumbnail
+      if (thumbnailFile) {
+        let projectThumbnail = thumbnailFile.filename;
+        if(project.projectThumbnail){
+          const oldThumbnail = path.join(process.cwd(), "public", "uploads", "project-files", project.projectThumbnail);
+          const exists = await checkIfExists(oldThumbnail);
+          if (exists) {
+            await fs.unlink(oldThumbnail);
+          }
+        }
+        // update project thumbnail
+        await ProjectModel.update(
+          { projectThumbnail },
+          { where: { id: projectId }, transaction }
+        );
+      }
       
       // create/update project field value with updateOnDuplicate
       await ProjectFieldValueModel.bulkCreate(validateData, {
@@ -344,30 +372,19 @@ export async function updateProjectService({req,res}){
       });
       
       // Fetch related data
-      const [batch, course, supervisor, newProject] = await Promise.all([
-        BatchModel.findByPk(batchId, { transaction }),
-        CourseModel.findByPk(courseId, {
-          include: [{ model: UserModel, as: "Coordinator" }],
-          transaction
-        }),
-        project.supervisorId
-          ? UserModel.findByPk(project.supervisorId, { transaction })
-          : null,
-        ProjectModel.findByPk(projectId,{transaction})
-      ]);
+      // const [batch, course, supervisor, newProject] = await Promise.all([
+      //   BatchModel.findByPk(batchId, { transaction }),
+      //   CourseModel.findByPk(courseId, {
+      //     include: [{ model: UserModel, as: "Coordinator" }],
+      //     transaction
+      //   }),
+      //   project.supervisorId
+      //     ? UserModel.findByPk(project.supervisorId, { transaction })
+      //     : null,
+      //   ProjectModel.findByPk(projectId,{transaction})
+      // ]);
 
-      const data = {
-        projectId: newProject.id,
-        projectName: newProject.projectName,
-        supervisorId: newProject.supervisorId,
-        supervisorName: supervisor?.userName || null,
-        thumbnail: newProject.projectThumbnail,
-        coordinatorName: course?.coordinator?.userName || null,
-        createdAt: newProject.created_at,
-        batchName: batch.batchName,
-        isFinal: batch?.isFinal,
-        isComplate: newProject.isComplete,
-      }
+      const data = await getProjectByIdService(projectId);
       // return data;
       return data;
     } catch (error) {
@@ -472,7 +489,6 @@ export async function getProjectByIdService(projectId) {
     }
   
     const { Supervisor, ProjectCourse, Batch, ProjectMembers, ProjectFieldValues, id, ...detailProject } = project.toJSON();
-    console.log("SUPERVISOR: ", Supervisor);
     const data = {
       projectId: id,
       ...detailProject,

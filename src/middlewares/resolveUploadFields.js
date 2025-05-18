@@ -10,6 +10,7 @@ async function resolveUploadFields(req, res, next) {
   });
 
   req.uploadFields = fileFields.map(f => f.fieldTag);
+  req.uploadFields = [...req.uploadFields, "projectThumbnail"];
   next();
 }
 

@@ -32,7 +32,7 @@ router.post("/profile/email/verify" ,authMiddleware, validateBody(verifySchema),
 router.get("/projects", authMiddleware, isStudent, getAllProject);
 // Update Project
 router.patch("/projects/:projectId", authMiddleware, isStudent, resolveUploadFields, uploadFile("project-files").any(), checkUploads(
-  req => req.batchFields, 
+  req => req.uploadFields, 
   null,
   (fieldname) => {
     const match = /^requirements\[(.+)\]$/.exec(fieldname);
