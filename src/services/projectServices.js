@@ -20,19 +20,18 @@ import { Op } from "sequelize";
 
 // Create Project
 export async function createProjectService({req,res}){
-  const { projectName, teams } = req.body;
+  const { projectName, teams, supervisorId } = req.body;
   const ROLE = getRole();
 
   return await withTransaction(async (transaction) => {
-    // find user
-    const user = await UserDetailModel.findOne({
-      attributes:["courseId"],
-      where:{ user_id:req.user.userId },
-      transaction
-    });
+    const courseId = req.user.courseId || null;
 
-    const courseId = user.courseId;
-  
+    // check session courseId
+    if(!req.user.courseId && courseId === null){
+      console.log("ERROR: ","Complete profile before accessing this resource.");
+      throw new ErrorHandler(500, "Internal Server Error");
+    }
+
     // find all user in course
     const users = await UserModel.findAll({
       attributes:[["id","userId"],"userName"],
@@ -75,17 +74,42 @@ export async function createProjectService({req,res}){
 
     // find supervisor in course
     const supervisorCourse =  await SupervisorCourseModel.findOne({
-      where:{ courseId },
+      where:{ courseId, supervisorId },
       transaction
     });
 
     if(!supervisorCourse){
       throw new ErrorHandler(400, "Bad Request",[
-        { field:"teams", message:"Supervisor is not set in thie course" }
+        { field:"supervisorId", message:"Supervisor is not set in this course" }
       ])
     }
 
-    const supervisorId = supervisorCourse.supervisorId;
+    // check if user have already project
+    const existingProject = await ProjectMemberModel.findOne({
+      where: {
+        userId: req.user.userId
+      },
+      include: [
+        {
+          model: ProjectModel,
+          as: "Project",
+          include: [
+            {
+              model: BatchModel,
+              as: "Batch",
+              where: { isFinal: false } // batch sekarang
+            }
+          ]
+        }
+      ],
+      transaction
+    });
+
+    if (existingProject) {
+      throw new ErrorHandler(400, "Bad Request",[
+        { field:"userId", message:"You already have a project in this batch" }
+      ])
+    }
   
     // Create project
     const newProject = await ProjectModel.create({
@@ -116,7 +140,7 @@ export async function createProjectService({req,res}){
     // Fetch related data
     const [batch, course, supervisor] = await Promise.all([
       BatchModel.findByPk(latestBatch.id,{transaction}),
-      CourseModel.findByPk(user.courseId, {
+      CourseModel.findByPk(courseId, {
         include: [{ model: UserModel, as: "Coordinator" }],
         transaction
       }),
