@@ -2,7 +2,7 @@ import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { checkIfExists, getRole } from "./../utils/helper.js";
 import prepareProjectFields from "./../utils/prepareProjectFields.js";
 import { withTransaction } from "./../utils/withTransaction.js";
-import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel } from "./../models/index.js";
+import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel, ProjectMemberArchiveModel } from "./../models/index.js";
 import { Op } from "sequelize";
 import fs from 'fs/promises';
 import path from "path";
@@ -404,19 +404,61 @@ export async function archiveProjectService({req,res}){
 
   return await withTransaction(async (transaction) => {
     const project = await getProjectByIdService(projectId);
-    // const updatedProject = await ProjectModel.update(
-    // {
-    //   // isArchive: true,
-    //   isFinal: true
-    // }, 
-    // {
-    //   where: { id: projectId },
-    //   transaction
-    // });
-  
-    const createArchive = await ProjectArchiveModel.create(project, {transaction});
-    console.log("PROJECT: ", createArchive);
-    return;
+    let memberToInsert = project.projectTeamMembers;
+    const [updatedCount] = await ProjectModel.update(
+    {
+      isArchived: true,
+    }, 
+    {
+      where: { id: projectId },
+      transaction
+    });
+    
+    // if update project failed
+    if (updatedCount < 1){
+      console.log("ERROR: ","Failed to update project");
+      throw new ErrorHandler(500, "Internal Server Error");
+    }
+
+    // check project archive if project ID is exist
+    const projectArchive = await ProjectArchiveModel.findOne({
+      where: { project_id: projectId },
+    });
+    if(projectArchive){
+      console.log("ERROR: ","Project ID already exist");
+      throw new ErrorHandler(400, "Bad Request",[
+        { field:"projectId", message:"Project ID already exist" }
+      ])
+    }
+
+    // update project member
+    memberToInsert = memberToInsert.map(member => ({
+      projectId: projectId,
+      userId: member.userId
+    }));
+
+    // check project member archive if project ID and user ID is exist
+    const projectMemberArchive = await ProjectMemberArchiveModel.findOne({
+      where: { project_id: projectId },
+    });
+    if(projectMemberArchive){
+      console.log("ERROR: ","Project ID already exist");
+      throw new ErrorHandler(400, "Bad Request",[
+        { field:"projectId", message:"Project ID already exist" }
+      ])
+    }
+
+    // insert project member
+    await ProjectMemberArchiveModel.bulkCreate(memberToInsert, {transaction});
+    
+    // update projectTeamMembers
+    project.projectTeamMembers = project.projectTeamMembers.map(member => member.userId);
+    await ProjectArchiveModel.create(project, {transaction});
+
+    return await ProjectArchiveModel.findOne({
+      where: { project_id: projectId },
+      transaction
+    });
   }, { ERROR_MESSAGE:"ARCHIVE PROJECT SERVICE" });
 }
 
@@ -580,7 +622,37 @@ export async function getProjectArchiveByIdService({req,res}){
 
   return await withTransaction(async (transaction) => {
     // const projects = await ProjectArchiveModel.findAll({transaction});
-    const projects = await ProjectArchiveModel.findByPk(req.params.projectId,{transaction});
-    return projects;
+    const findProject = await ProjectArchiveModel.findOne({
+      where: { project_id: projectId },
+      include: [
+        {
+          model: ProjectMemberArchiveModel,
+          as: "ArchivedMembers",
+          attributes: ["userId"],
+          include: [
+            {
+              model: UserDetailModel,
+              as: "ArchivedUser",
+              attributes: [["id", "userId"]],
+              include: [
+                {
+                  model: UserModel,
+                  as: "User",
+                  attributes: [["id", "userId"], "userName"]
+                }
+              ],
+            },
+          ],
+        }
+      ],
+      transaction
+    });
+    const project = findProject.toJSON();
+    project.projectTeamMembers = project.ArchivedMembers.map((member) => ({
+      userId: member.ArchivedUser.userId,
+      userName: member.ArchivedUser.User.userName,
+    }));
+    delete project.ArchivedMembers;
+    return project;
   }, { ERROR_MESSAGE:"GET PROJECT BY ID" });
 }

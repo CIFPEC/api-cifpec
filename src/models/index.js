@@ -14,7 +14,6 @@ import Database from "./../config/database.js";
 import "dotenv/config";
 import ProjectMemberArchives from './ProjectMemberArchiveModel.js';
 import ProjectArchives from "./projectArchiveModel.js";
-import ProjectValueArchives from './ProjectValueArchiveModel.js';
 import SupervisorCourses from './supervisorCourseModel.js';
 import Sessions from "./sessionModel.js";
 import { Create_Roles, Create_Courses, Create_DataSite } from "./../utils/autoCreate.js";
@@ -66,16 +65,12 @@ Users.hasOne(Courses,{foreignKey:"coordinator_id",as:"ManagedCourse"});
 // ARCHIVE TABLE
 // =============
 // project_members_archives.project_id > project_archive.id
-ProjectMemberArchives.belongsTo(ProjectArchives,{foreignKey:"project_id"});
-ProjectArchives.hasMany(ProjectMemberArchives,{foreignKey:"project_id"});
+ProjectMemberArchives.belongsTo(ProjectArchives,{foreignKey:"project_id", targetKey:"projectId", as:"ArchivedProject"});
+ProjectArchives.hasMany(ProjectMemberArchives,{foreignKey:"project_id", sourceKey:"projectId", as:"ArchivedMembers"});
 
 // project_members_archives.user_id < user_details.user_id
-ProjectMemberArchives.belongsTo(UserDetails,{foreignKey:"user_id"});
-UserDetails.hasMany(ProjectMemberArchives,{foreignKey:"user_id"});
-
-// project_value_archives.project_id < project_archives.id
-ProjectValueArchives.belongsTo(ProjectArchives,{foreignKey:"project_id"});
-ProjectArchives.hasMany(ProjectValueArchives,{foreignKey:"project_id"});
+ProjectMemberArchives.belongsTo(UserDetails,{foreignKey:"user_id", as:"ArchivedUser"});
+UserDetails.hasMany(ProjectMemberArchives,{foreignKey:"user_id", as:"ArchivedProjects"});
 
 /*
 NOTE projects to batch_fields (many-to-many)
@@ -180,7 +175,6 @@ export {
   SiteDetails as SiteDetailModel,
   ProjectArchives as ProjectArchiveModel,
   ProjectMemberArchives as ProjectMemberArchiveModel,
-  ProjectValueArchives as ProjectValueArchiveModel,
   SupervisorCourses as SupervisorCourseModel,
   Sessions as SessionModel 
 };

@@ -87,6 +87,12 @@ const Projects = Database.define("project",
       defaultValue: false,
       field:"is_complete"
     },
+    // - is_complete
+    isArchived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field:"is_archived"
+    },
     // - created_at
     createdAt: {
       type: DataTypes.DATE,
