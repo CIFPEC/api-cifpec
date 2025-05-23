@@ -7,6 +7,7 @@ import { getCodeWithToken, getRandomNumber, getRole, requestType } from "./../ut
 import { compile } from "./../utils/compile.js";
 import { createAuthToken } from "./../utils/createAuthToken.js";
 import { createVerifyResetToken } from "./../utils/createVerifyResetToken.js";
+import e from "express";
 
 
 /** 
@@ -315,10 +316,19 @@ export async function verifyService(token,user,type,{req,res}) {
       })
     }
     
-    // update user
-    await UserModel.update({isVerify: 1}, {where: {id: verify.userId}}, {transaction});
-    const userData = await UserModel.findOne({where: {id: verify.userId}});
+    // prepare data
+    const valueToUpdate = { isVerify:true };
+    const userData = await UserModel.findOne({where: {id: verify.userId}}, {transaction});
+    if(userData.newEmail !== null && userData.newEmail === user.userEmail) {
+      valueToUpdate.userEmail = userData.newEmail;
+      valueToUpdate.newEmail = null;
+      // renew refresh token
+      await createAuthToken({ req, res }, {id:req.user.userId});
+    }
     
+    // update user
+    await UserModel.update(valueToUpdate, {where: {id: verify.userId}}, {transaction});
+
     // delete verify
     await VerifyModel.destroy({where: {userId: verify.userId}}, {transaction});
     
@@ -349,17 +359,20 @@ export async function requestCodeService(email,type) {
 
   const transaction = await Database.transaction();
   try {
-    // check user
     const user = await UserModel.findOne({ where: { userEmail: email } });
-    if (!user) {
+    const newUserEmail = await UserModel.findOne({ where: { newEmail: email } });
+    
+    const existUser = user || newUserEmail;
+    if (!existUser) {
       throw new ErrorHandler(403, "Forbidden",[
         { field: "email", message: "If your email is correct, verification code will be sent to your email"},
       ]);
     }
+    const userEmail = user ? user.userEmail : newUserEmail.newEmail;
 
     // check if email is verify
     if (currentType.value === "verify") {
-      if (user.isVerify) {
+      if (existUser.isVerify) {
         throw new ErrorHandler(403, "Forbidden",[
           { field: "userEmail", message: "Email already verify!"},
         ]);
@@ -367,17 +380,17 @@ export async function requestCodeService(email,type) {
     }
 
     // check verify userid is ecpired or not
-    const verify = await VerifyModel.findOne({ where: { userId: user.id } });
+    const verify = await VerifyModel.findOne({ where: { userId: existUser.id } });
     if (verify) {
       // delete verify
-      await VerifyModel.destroy({ where: { userId: user.id }, transaction });
+      await VerifyModel.destroy({ where: { userId: existUser.id }, transaction });
     }
 
     // create verifyToken and random number
     const result = getCodeWithToken({
-      userId: user.id,
-      userEmail: user.userEmail,
-      roleId: user.roleId
+      userId: existUser.id,
+      userEmail,
+      roleId: existUser.roleId
     }, currentType);
 
     const data = {

@@ -39,6 +39,7 @@ export async function createAuthToken({req,res},user){
       ],
       where:{id:user.id}
     });
+
     const { Profile, Role, ...userDetail } = User.toJSON();
     const { EnrolledCourse } = Profile || {};
     const { coursesInBatch } = EnrolledCourse || {};
@@ -82,10 +83,11 @@ export async function createAuthToken({req,res},user){
       })
 
       // update session
-      return await SessionModel.update({
+      await SessionModel.update({
         sessionToken: ResreshToken,
         expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours or 1 day
       },{where:{userId:user.id}});
+      return; 
 
       // renew access token
       // AccessToken = await renewAccessTokenService(req,res);

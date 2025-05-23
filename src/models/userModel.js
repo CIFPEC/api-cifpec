@@ -31,6 +31,16 @@ const Users = Database.define("user",
       },
       field:"email"
     },
+    // - new_email
+    newEmail: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+      unique: {
+        args: true,
+        msg: "Email already exists!"
+      },
+      field:"new_email"
+    },
     // - password
     userPassword: {
       type: DataTypes.STRING,

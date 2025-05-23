@@ -8,6 +8,7 @@ import { getAllProject, updateProject } from '../../controllers/projectControlle
 import { uploadFile } from './../../utils/uploader.js';
 import checkUploads from './../../utils/checkUploads.js';
 import resolveUploadFields from './../../middlewares/resolveUploadFields.js';
+import { profileImage } from '../../middlewares/checkFileType.js';
 const router = express.Router();
 
 /**
@@ -23,7 +24,7 @@ const router = express.Router();
 
 // Get Current User
 router.get("/profile",authMiddleware, getCurrentUser);
-router.patch("/profile" ,authMiddleware ,validateBody(updateCurrentUserSchema), updateCurrentUser);
+router.patch("/profile" ,authMiddleware ,validateBody(updateCurrentUserSchema), uploadFile("profile").any(), checkUploads(["userProfileImage"],profileImage), updateCurrentUser);
 router.patch("/profile/password" ,authMiddleware ,validateBody(updateCurrentUserPasswordSchema), updateCurrentUserPassword);
 router.post("/profile/email/verify/request" ,authMiddleware ,validateBody(requestCodeSchema) ,requestCodeVerifyEmail);
 router.post("/profile/email/verify" ,authMiddleware, validateBody(verifySchema), verifyEmail);

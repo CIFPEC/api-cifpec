@@ -62,7 +62,7 @@ export async function getAllLecturerService({req,res}) {
         model: UserDetailModel,
         as: "Profile",
         required: true,
-        attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+        attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
         include: [
           {
             model: CourseModel,
@@ -148,7 +148,7 @@ export async function getAllStudentService({req,res}) {
         model: UserDetailModel,
         as: "Profile",
         required: true,
-        attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+        attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
         where:{
           "is_fInal":false
         },
@@ -226,7 +226,7 @@ export async function updateLecturerService({ req, res }) {
             model: UserDetailModel,
             as: "Profile",
             required: true,
-            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
             include: [
               {
                 model: CourseModel,
@@ -294,7 +294,7 @@ export async function updateLecturerService({ req, res }) {
             model: UserDetailModel,
             as: "Profile",
             required: true,
-            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
             include: [
               {
                 model: CourseModel,
@@ -346,7 +346,7 @@ export async function updateLecturerService({ req, res }) {
             model: UserDetailModel,
             as: "Profile",
             required: true,
-            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
             include: [
               {
                 model: CourseModel,
@@ -396,7 +396,7 @@ export async function updateLecturerService({ req, res }) {
             model: UserDetailModel,
             as: "Profile",
             required: true,
-            attributes: ["userId", "userUsername", "userGender", "userPhone", "userNickname"],
+            attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
             include: [
               {
                 model: CourseModel,

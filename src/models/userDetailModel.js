@@ -45,10 +45,10 @@ const UserDetails = Database.define("user_detail",
       type: DataTypes.STRING,
       field:"phone_number"
     },
-    // - nickname
-    userNickname: {
+    // - profile_image
+    userProfileImage: {
       type: DataTypes.STRING,
-      field:"nickname"
+      field:"profile_image"
     },
     // - course_id
     courseId: {

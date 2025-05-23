@@ -8,3 +8,11 @@ export async function siteSetting(req,res,next){
     next(error);
   }
 }
+
+export async function profileImage(req,res,next){
+  try {
+    processFile({ req, res, next },["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+  } catch (error) {
+    next(error);
+  }
+}

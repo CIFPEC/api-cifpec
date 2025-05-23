@@ -118,7 +118,7 @@ export function getRole(){
 }
 
 export function CreateAccessToken({userId,userEmail,roleId,roleName,courseId,batchId}){
-  const AccessToken = jwt.sign({ userId, userEmail, roleId, roleName, courseId, batchId }, process.env.ACCESS_KEY, { expiresIn:"20s" });
+  const AccessToken = jwt.sign({ userId, userEmail, roleId, roleName, courseId, batchId }, process.env.ACCESS_KEY, { expiresIn:"40s" });
   return AccessToken;
 }
 
