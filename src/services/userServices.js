@@ -257,20 +257,27 @@ export async function updateLecturerService({ req, res }) {
         ]);
       }
       if(req.body.hasOwnProperty("isApproved")){
-        await UserModel.update(
-          { isAdminApprove: isApproved, isLecturerActive: true },
-          { where: { id: userId }, transaction }
-        );
-
-        await CourseModel.update(
-          { coordinatorId: userId },
-          { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
-        )
-    
-        await SupervisorCourseModel.create({
-          courseId:user.Profile.EnrolledCourse.dataValues.courseId,
-          supervisorId:userId
-        },{transaction});
+        if(!isApproved){
+          await UserModel.update(
+            { isAdminApprove: isApproved, isLecturerActive: false },
+            { where: { id: userId }, transaction }
+          );
+        }else{
+          await UserModel.update(
+            { isAdminApprove: isApproved, isLecturerActive: true },
+            { where: { id: userId }, transaction }
+          );
+  
+          await CourseModel.update(
+            { coordinatorId: userId },
+            { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
+          )
+      
+          await SupervisorCourseModel.create({
+            courseId:user.Profile.EnrolledCourse.dataValues.courseId,
+            supervisorId:userId
+          },{transaction});
+        }
       }else if(req.body.hasOwnProperty("isActive")){
         await UserModel.update(
           { isLecturerActive: isActive },
@@ -365,9 +372,17 @@ export async function updateLecturerService({ req, res }) {
 
       if (!user) {
         throw new ErrorHandler(404, "Not Found", [
-          { parameter: "userId", message: "User not found" },
+          { parameter: "userId", message: "you are not authorized" },
         ]);
       }
+
+      // check if profile is incomplete
+      const UserRequest = user.toJSON();
+      if (!UserRequest.userName || !UserRequest.Profile.userUsername || !UserRequest.Profile.userGender || !UserRequest.Profile.userPhone) {
+        throw new ErrorHandler(400, "Bad Request", [
+          { parameter: "userId", message: "User profile is incomplete. Please update it to continue." },
+        ]);
+      }      
 
       if (!Object.values(ROLE).includes(req.user.roleId)) {
         throw new ErrorHandler(400, "Bad Request", [
