@@ -14,6 +14,7 @@ const ProjectArchives = Database.define("project_archive",
     projectId: {
       type: DataTypes.BIGINT,
       allowNull: false,
+      unique: true,
       validate: {
         notNull: {
           msg: "Project ID is required!"
