@@ -511,21 +511,22 @@ export async function getAllProjectByBatchService({ req, res }) {
         {
           model: UserModel,
           as: "Supervisor",
-          attributes: ["id", "userName"]
+          attributes: [["id", "supervisorId"], ["name", "supervisorName"]]
         },
         {
           model: BatchModel,
           as: "Batch",
-          attributes: ["batchName", "isFinal"]
+          attributes: [["id","batchId"],"batchName", "isFinal"]
         },
         {
           model: CourseModel,
           as: "ProjectCourse",
+          attributes: [["id", "courseId"], "courseName"],
           include: [
             {
               model: UserModel,
               as: "Coordinator",
-              attributes: ["id", "userName"]
+              attributes: [["id", "coordinatorId"], ["name", "coordinatorName"]]
             }
           ]
         },
@@ -565,19 +566,21 @@ export async function getAllProjectByBatchService({ req, res }) {
       return {
         projectId: project.dataValues.id,
         projectName: project.dataValues.projectName,
-        supervisorId: project.dataValues.Supervisor?.id,
-        supervisorName: project.dataValues.Supervisor?.userName,
-        thumbnail: project.dataValues.projectThumbnail,
-        coordinatorName: project.dataValues.ProjectCourse?.Coordinator?.userName || null,
-        createdAt: project.dataValues.createdAt,
+        projectThumbnail: project.dataValues.projectThumbnail,
+        batchId: project.dataValues.Batch?.batchId,
         batchName: project.dataValues.Batch?.batchName,
+        courseId: project.dataValues.ProjectCourse?.courseid,
+        courseName: project.dataValues.ProjectCourse?.courseName,
+        courseCoordinatorName: project.dataValues.ProjectCourse?.Coordinator?.coordinatorName || null,
+        courseSupervisorId: project.dataValues.Supervisor?.supervisorId,
+        courseSupervisorName: project.dataValues.Supervisor?.supervisorName,
+        projectCreatedAt: project.dataValues.createdAt,
         isFinal: project.dataValues.Batch?.isFinal,
-        isComplate: project.dataValues.isComplete,
-        requirements: project.dataValues.ProjectFieldValues.map(field => ({
+        projectRequirements: project.dataValues.ProjectFieldValues.map(field => ({
             fieldName: field.BatchField.fieldName,
             fieldValue: field.fieldValue,
         })),
-        teams: project.dataValues.Teams.map(member => ({
+        projectTeamMembers: project.dataValues.Teams.map(member => ({
           userId: member.id,
           userName: member.userName
         }))
@@ -635,21 +638,22 @@ export async function getProjectInBatchByIdService({ req, res }) {
         {
           model: UserModel,
           as: "Supervisor",
-          attributes: ["id", "userName"]
+          attributes: [["id", "supervisorId"], ["name", "supervisorName"]]
         },
         {
           model: BatchModel,
           as: "Batch",
-          attributes: ["batchName", "isFinal"]
+          attributes: [["id", "batchId"],"batchName", "isFinal"]
         },
         {
           model: CourseModel,
           as: "ProjectCourse",
+          attributes: [["id", "courseId"], "courseName"],
           include: [
             {
               model: UserModel,
               as: "Coordinator",
-              attributes: ["id", "userName"]
+              attributes: ["id", ["name", "coordinatorName"]]
             }
           ]
         },
@@ -686,19 +690,21 @@ export async function getProjectInBatchByIdService({ req, res }) {
     const data = {
       projectId: project.id,
       projectName: project.projectName,
-      supervisorId: project.Supervisor?.id,
-      supervisorName: project.Supervisor?.userName,
-      thumbnail: project.projectThumbnail,
-      coordinatorName: project.ProjectCourse?.Coordinator?.userName || null,
-      createdAt: project.createdAt,
+      projectThumbnail: project.projectThumbnail,
+      batchId: project.Batch?.batchId,
       batchName: project.Batch?.batchName,
+      courseId: project.ProjectCourse?.courseid,
+      courseName: project.ProjectCourse?.courseName,
+      courseCoordinatorName: project.ProjectCourse?.Coordinator?.coordinatorName || null,
+      courseSupervisorId: project.Supervisor?.supervisorId,
+      courseSupervisorName: project.Supervisor?.supervisorName,
+      projectCreatedAt: project.createdAt,
       isFinal: project.Batch?.isFinal,
-      isComplate: project.isComplete,
-      requirements: project.ProjectFieldValues.map(field => ({
+      projectRequirements: project.ProjectFieldValues.map(field => ({
         fieldName: field.BatchField.fieldName,
         fieldValue: field.fieldValue,
       })),
-      teams: project.Teams.map(member => ({
+      projectTeamMembers: project.Teams.map(member => ({
         userId: member.id,
         userName: member.userName
       }))
