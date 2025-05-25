@@ -437,13 +437,13 @@ export async function archiveProjectService({req,res}){
         { field:"projectId", message:"Project ID already exist" }
       ])
     }
-
-    // insert project member
-    await ProjectMemberArchiveModel.bulkCreate(memberToInsert, {transaction});
     
     // update projectTeamMembers
     project.projectTeamMembers = project.projectTeamMembers.map(member => member.userId);
     await ProjectArchiveModel.create(project, {transaction});
+
+    // insert project member
+    await ProjectMemberArchiveModel.bulkCreate(memberToInsert, {transaction});
 
     return await ProjectArchiveModel.findOne({
       where: { project_id: projectId },
