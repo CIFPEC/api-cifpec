@@ -31,29 +31,9 @@ export async function createProjectService({req,res}){
 
     // check session courseId
     if(!req.user.courseId && courseId === null){
-      console.log("ERROR: ","Complete profile before accessing this resource.");
+      console.log("ERROR: ","Course ID not found in session");
       throw new ErrorHandler(500, "Internal Server Error");
     }
-
-    // find all user in course
-    const users = await UserModel.findAll({
-      attributes:[["id","userId"],"userName"],
-      include:[
-        {
-          model:UserDetailModel,
-          as: "Profile",
-          where:{
-            is_final:false,
-            course_id: courseId
-          }
-        }
-      ],
-      where:{
-        role_id: ROLE.STUDENT
-      },
-      transaction,
-      raw:false
-    });
 
     // 1. find active batch
     const latestBatch = await BatchModel.findOne({
@@ -72,8 +52,37 @@ export async function createProjectService({req,res}){
         { field:"teams", message:"Batch active is not exist in this course" }
       ])
     }
-  
+
     const batchId = latestBatch.id;
+
+    // find all user in course
+    const users = await UserModel.findAll({
+      attributes:[["id","userId"],"userName"],
+      include:[
+        {
+          model:UserDetailModel,
+          as: "Profile",
+          where:{
+            is_final:false,
+            course_id: courseId,
+            batch_id: batchId
+          }
+        }
+      ],
+      where:{
+        role_id: ROLE.STUDENT
+      },
+      transaction,
+      raw:false
+    });
+
+    const validUserIds = users.map(user => Number(user.dataValues.userId));
+    const allValid = teams.every(id => validUserIds.includes(Number(id)));
+    if (!allValid) {
+      throw new ErrorHandler(400, "Bad Request", [
+        { field: "teams", message: "Please select students only from your course" }
+      ]);
+    }
 
     // find supervisor in course
     const supervisorCourse =  await SupervisorCourseModel.findOne({
@@ -96,6 +105,7 @@ export async function createProjectService({req,res}){
         {
           model: ProjectModel,
           as: "Project",
+          where: { isArchived: false },
           include: [
             {
               model: BatchModel,
@@ -141,29 +151,7 @@ export async function createProjectService({req,res}){
     await ProjectMemberModel.bulkCreate(final,{transaction});
 
     // Fetch related data
-    const [batch, course, supervisor] = await Promise.all([
-      BatchModel.findByPk(latestBatch.id,{transaction}),
-      CourseModel.findByPk(courseId, {
-        include: [{ model: UserModel, as: "Coordinator" }],
-        transaction
-      }),
-      newProject.supervisorId
-        ? UserModel.findByPk(newProject.supervisorId,{transaction})
-        : null,
-    ]);
-
-    const data = {
-      projectId: newProject.id,
-      projectName: newProject.projectName,
-      supervisorId: newProject.supervisorId,
-      supervisorName: supervisor?.userName || null,
-      thumbnail: newProject.projectThumbnail,
-      coordinatorName: course?.coordinator?.userName || null,
-      createdAt: newProject.created_at,
-      batchName: latestBatch.batchName,
-      isFinal: batch?.isFinal,
-      isComplate: newProject.isComplete,
-    }
+    const data = await getProjectByIdService(newProject.id, transaction);
     return data;
   }, { ERROR_MESSAGE:"CREATE PROJECT SERVICE" });
 }
@@ -265,23 +253,25 @@ export async function getAllUserProjectService({req,res}){
     const { ProjectMembers } = userProjects.toJSON();
     const projects = ProjectMembers.map((project) => {
       return {
-        projectId: project.Project.id,
+        projectId: project.Project.projectId,
         projectName: project.Project.projectName,
-        supervisorId: project.Project.supervisorId,
-        supervisorName: project.Project.Supervisor?.supervisorName || null,
-        thumbnail: project.Project?.projectThumbnail || null,
-        coordinatorName: project.Project.ProjectCourse?.Coordinator?.coordinatorName || null,
+        projectThumbnail: project.Project?.projectThumbnail || null,
+        batchId: project.Project.Batch.batchId,
         batchName: project.Project.Batch.batchName,
+        courseId: project.Project.ProjectCourse.courseId,
+        courseName: project.Project.ProjectCourse.courseName,
+        courseCoordinatorName: project.Project.ProjectCourse?.Coordinator?.coordinatorName || null,
+        courseSupervisorId: project.Project.Supervisor?.supervisorId || null,
+        courseSupervisorName: project.Project.Supervisor?.supervisorName || null,
+        projectCreatedAt: project.Project.createdAt,
         isFinal: project.Project.Batch.isFinal,
-        isComplete: project.Project.isComplete,
-        createdAt: project.Project.createdAt,
-        requirements: project.Project.ProjectFieldValues.map((field) => {
+        projectRequirements: project.Project.ProjectFieldValues.map((field) => {
           return {
             fieldName: field.BatchField.fieldName,
             fieldValue: field.fieldValue,
           };
         }),
-        teams: project.Project.ProjectMembers.map((member) => {
+        projectTeamMembers: project.Project.ProjectMembers.map((member) => {
           return {
             userId: member.User.userId,
             userName: member.User?.userName || null,
@@ -463,7 +453,14 @@ export async function archiveProjectService({req,res}){
 }
 
 // get project by id (NEW)
-export async function getProjectByIdService(projectId) {
+export async function getProjectByIdService(projectId,externalTransaction=false) {
+  const secondParameter = {
+    ERROR_MESSAGE:"GET PROJECT BY ID",
+  }
+  // check external transaction
+  if(externalTransaction){
+    secondParameter.externalTransaction = externalTransaction;
+  }
   if(!projectId){
     console.log("ERROR: project id is required");
     throw new ErrorHandler(500, "Internal Server Error");
@@ -553,7 +550,7 @@ export async function getProjectByIdService(projectId) {
       isFinal: Batch.isFinal,
     };
     return data;
-  },{ERROR_MESSAGE:"GET PROJECT BY ID"})
+  },secondParameter)
 }
 
 

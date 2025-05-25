@@ -281,9 +281,38 @@ export async function updateLecturerService({ req, res }) {
       if(req.body.hasOwnProperty("isApproved")){
         if(!isApproved){
           await UserModel.update(
-            { isAdminApprove: isApproved, isLecturerActive: false },
+            { isLecturerRequest: false, isAdminApprove: isApproved, isLecturerActive: false },
             { where: { id: userId }, transaction }
           );
+
+          // check if user role == 'coordinator' or 'supervisor'
+          if (user.Role.dataValues.roleName === "coordinator" || user.Role.dataValues.roleName === "supervisor") {
+            const courseId = user.toJSON()?.Profile?.EnrolledCourse?.courseId;
+
+            if (!courseId) {
+              throw new ErrorHandler(400, "Bad Request", [
+                { field: "userId", message: "User is not linked to any course as a supervisor or coordinator." }
+              ]);
+            }
+
+            // check if user is exist in SupervisorCourse
+            const supervisorExists = await SupervisorCourseModel.findOne({
+              where: {
+                courseId,
+                supervisorId: userId
+              },
+              transaction
+            })
+
+            if (supervisorExists) {
+              await SupervisorCourseModel.destroy({
+                where: {
+                  courseId,
+                  supervisorId: userId
+                }, transaction
+              });
+            }
+          }
         }else{
           await UserModel.update(
             { isAdminApprove: isApproved, isLecturerActive: true },
@@ -300,11 +329,6 @@ export async function updateLecturerService({ req, res }) {
             supervisorId:userId
           },{transaction});
         }
-      }else if(req.body.hasOwnProperty("isActive")){
-        await UserModel.update(
-          { isLecturerActive: isActive },
-          { where: { id: userId }, transaction }
-        );
       }
      
       user = await UserModel.findOne({

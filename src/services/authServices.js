@@ -38,6 +38,7 @@ export async function registerService(userRequest) {
 
     // check if request role is exist in roleid
     delete roleId.ADMIN;
+    delete roleId.WEB_MAINTENANCE;
     if(Object.values(roleId).includes(userRequest.roleId)) {
       
       // check course
