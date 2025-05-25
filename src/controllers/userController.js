@@ -1,4 +1,4 @@
-import { getAllLecturerService, getAllStudentService, getStudentByBatchAndCourseService, updateLecturerService } from "./../services/userServices.js";
+import { getAllLecturerService, getAllStudentService, updateLecturerService } from "./../services/userServices.js";
 /**
  * ========
  * USERS
@@ -48,21 +48,6 @@ export async function updateLecturer(req, res, next) {
       statusCode: 200,
       message: "Update Lecturer Successfuly",
       data: lecturer,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-// Get all students (in batch and course)
-export async function getAllStudents(req, res, next) {
-  try {
-    const student = await getStudentByBatchAndCourseService({ req, res });
-    res.status(200).json({
-      statusCode: 200,
-      message: "Get All Student by Batch and Course Successfuly",
-      data: student.data,
-      paginate: student.paginate
     });
   } catch (error) {
     next(error);

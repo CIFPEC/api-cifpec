@@ -1,7 +1,7 @@
 import { withTransaction } from "./../utils/withTransaction.js";
 import { getRole } from './../utils/helper.js';
 import { Op } from "sequelize";
-import { CourseModel, ProjectModel, RoleModel, SupervisorCourseModel, UserDetailModel, UserModel } from "./../models/index.js";
+import { BatchModel, CourseModel, ProjectModel, RoleModel, SupervisorCourseModel, UserDetailModel, UserModel } from "./../models/index.js";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 
 /**
@@ -126,6 +126,10 @@ export async function getAllStudentService({req,res}) {
     isVerify: true,
   };
 
+  const whereUserDetail = {
+    isFinal: false,
+  };
+
   // If course filter exists
   const courseFilter = req.query.course
     ? { id: parseInt(req.query.course) }
@@ -149,9 +153,7 @@ export async function getAllStudentService({req,res}) {
         as: "Profile",
         required: true,
         attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
-        where:{
-          "is_fInal":false
-        },
+        where: whereUserDetail,
         include: [
           {
             model: CourseModel,
@@ -169,7 +171,27 @@ export async function getAllStudentService({req,res}) {
   }
 
   return await withTransaction(async (transaction) => {
+    // get latest batch
+    let latestBatch = await BatchModel.findOne({
+      attributes: [["id", "batchId"], ["name", "batchName"]],
+      order: [["created_at", "DESC"]],
+      transaction
+    });
+    latestBatch = latestBatch.toJSON();
+    
+    // check lastest batch
+    if(!latestBatch) {
+      console.log("ERROR: ","Batch not found.");
+      throw new ErrorHandler(500, "Internal Server Error");
+    }
+
     Options.transaction = transaction;
+    if(req.user.roleName === "admin"){
+      whereUserDetail.batchId = latestBatch.batchId;
+    }else{
+      whereUserDetail.batchId = req.user.batchId;
+    }
+
     let result = await UserModel.findAndCountAll(Options);
 
     // Reshape data
@@ -442,91 +464,3 @@ export async function updateLecturerService({ req, res }) {
   }
 }
 
-// Get all students (in batch and course)
-export async function getStudentByBatchAndCourseService({ req, res }) {
-  // const { batch_id, course_id } = req.params;
-
-  // const page = parseInt(req.query.page) || 1;
-  // let limit = parseInt(req.query.limit) || 5;
-  // limit = limit > 20 ? 20 : limit;
-  // const offset = (page - 1) * limit;
-
-  // return await withTransaction(async (transaction) => {
-  //   const result = await UserModel.findAndCountAll({
-  //     where: {
-  //       roleId: getRole().STUDENT,
-  //       isVerify: true,
-  //     },
-  //     attributes: {
-  //       exclude: ["userPassword", "createdAt", "updatedAt"],
-  //       include: [["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
-  //     },
-  //     include: [
-  //       {
-  //         model: UserDetailModel,
-  //         as: "Profile",
-  //         required: true,
-  //         where: {
-  //           is_final: false,
-  //           courseId: course_id,
-  //         },
-  //         include: [
-  //           {
-  //             model: CourseModel,
-  //             as: "EnrolledCourse",
-  //             required: true,
-  //             attributes: [["id", "courseId"], ["name", "courseName"]],
-  //           }
-  //         ]
-  //       },
-  //       {
-  //         model: RoleModel,
-  //         as: "Role",
-  //         required: true,
-  //         attributes: [["id", "roleId"], ["name", "roleName"]],
-  //       },
-  //       {
-  //         model: ProjectModel,
-  //         as: "StudentProject", // make sure ada alias ni
-  //         required: true,
-  //         where: {
-  //           batchId: batch_id,
-  //           courseId: course_id,
-  //         },
-  //       }
-  //     ],
-  //     offset,
-  //     limit,
-  //     order: [["created_at", "DESC"]],
-  //     transaction
-  //   });
-
-  //   const reshapedData = result.rows.map(user => {
-  //     const { Role, Profile, ...rest } = user.toJSON();
-  //     const { EnrolledCourse, ...profileRest } = Profile || {};
-  //     return {
-  //       ...rest,
-  //       ...profileRest,
-  //       userRole: Role,
-  //       userCourse: EnrolledCourse
-  //     };
-  //   });
-
-  //   return {
-  //     paginate: {
-  //       currentPage: page,
-  //       totalPages: Math.ceil(result.count / limit),
-  //       totalItems: result.count,
-  //     },
-  //     data: reshapedData
-  //   };
-  // }, { ERROR_MESSAGE: "GET STUDENT BY BATCH & COURSE" });
-
-  try {
-    const user = await UserModel.associations;
-    console.log(user);
-    return;
-  } catch (error) {
-    throw error;
-  }
-}
