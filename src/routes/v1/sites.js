@@ -17,6 +17,6 @@ const router = express.Router();
  */
 
 router.patch("/settings", authMiddleware, isWebMaintenance, validateBody(updateSiteSchema),uploadFile("site-settings").any(), checkUploads(["logo","banner"],siteSetting), siteUpdate);
-router.get("/settings", authMiddleware, isWebMaintenance, getSite);
+router.get("/settings", getSite);
 
 export default router;

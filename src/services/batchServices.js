@@ -2,6 +2,7 @@ import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database, ProjectModel, UserModel, ProjectFieldValueModel, UserDetailModel, ProjectMemberModel } from "./../models/index.js";
 import { Sequelize } from "sequelize";
 import { withTransaction } from "../utils/withTransaction.js";
+import { getProtocol } from "../utils/helper.js";
 
 /**
  * ========
@@ -566,14 +567,14 @@ export async function getAllProjectByBatchService({ req, res }) {
       return {
         projectId: project.dataValues.id,
         projectName: project.dataValues.projectName,
-        projectThumbnail: project.dataValues.projectThumbnail,
-        batchId: project.dataValues.Batch?.batchId,
-        batchName: project.dataValues.Batch?.batchName,
-        courseId: project.dataValues.ProjectCourse?.courseid,
-        courseName: project.dataValues.ProjectCourse?.courseName,
-        courseCoordinatorName: project.dataValues.ProjectCourse?.Coordinator?.coordinatorName || null,
-        courseSupervisorId: project.dataValues.Supervisor?.supervisorId,
-        courseSupervisorName: project.dataValues.Supervisor?.supervisorName,
+        projectThumbnail: project.dataValues.projectThumbnail ? getProtocol(req,"projects",project.dataValues.projectThumbnail) : null,
+        batchId: project.dataValues.Batch?.dataValues?.batchId,
+        batchName: project.dataValues.Batch?.dataValues?.batchName,
+        courseId: project.dataValues.ProjectCourse?.dataValues?.courseId,
+        courseName: project.dataValues.ProjectCourse?.dataValues?.courseName,
+        courseCoordinatorName: project.dataValues.ProjectCourse?.Coordinator?.dataValues?.coordinatorName,
+        courseSupervisorId: project.dataValues.Supervisor?.dataValues?.supervisorId,
+        courseSupervisorName: project.dataValues.Supervisor?.dataValues?.supervisorName,
         projectCreatedAt: project.dataValues.createdAt,
         isFinal: project.dataValues.Batch?.isFinal,
         projectRequirements: project.dataValues.ProjectFieldValues.map(field => ({
@@ -690,14 +691,14 @@ export async function getProjectInBatchByIdService({ req, res }) {
     const data = {
       projectId: project.id,
       projectName: project.projectName,
-      projectThumbnail: project.projectThumbnail,
-      batchId: project.Batch?.batchId,
-      batchName: project.Batch?.batchName,
-      courseId: project.ProjectCourse?.courseid,
-      courseName: project.ProjectCourse?.courseName,
-      courseCoordinatorName: project.ProjectCourse?.Coordinator?.coordinatorName || null,
-      courseSupervisorId: project.Supervisor?.supervisorId,
-      courseSupervisorName: project.Supervisor?.supervisorName,
+      projectThumbnail: project.projectThumbnail ? getProtocol(req,"projects",project.projectThumbnail) : null,
+      batchId: project.Batch?.dataValues?.batchId,
+      batchName: project.Batch?.dataValues?.batchName,
+      courseId: project.ProjectCourse?.dataValues?.courseId,
+      courseName: project.ProjectCourse?.dataValues?.courseName,
+      courseCoordinatorName: project.ProjectCourse?.Coordinator?.dataValues?.coordinatorName,
+      courseSupervisorId: project.Supervisor?.dataValues?.supervisorId,
+      courseSupervisorName: project.Supervisor?.dataValues?.supervisorName,
       projectCreatedAt: project.createdAt,
       isFinal: project.Batch?.isFinal,
       projectRequirements: project.ProjectFieldValues.map(field => ({

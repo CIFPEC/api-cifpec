@@ -1,5 +1,5 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { checkIfExists, getRole } from "./../utils/helper.js";
+import { checkIfExists, getProtocol, getRole } from "./../utils/helper.js";
 import prepareProjectFields from "./../utils/prepareProjectFields.js";
 import { withTransaction } from "./../utils/withTransaction.js";
 import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel, ProjectMemberArchiveModel } from "./../models/index.js";
@@ -151,7 +151,7 @@ export async function createProjectService({req,res}){
     await ProjectMemberModel.bulkCreate(final,{transaction});
 
     // Fetch related data
-    const data = await getProjectByIdService(newProject.id, transaction);
+    const data = await getProjectByIdService(req,newProject.id, transaction);
     return data;
   }, { ERROR_MESSAGE:"CREATE PROJECT SERVICE" });
 }
@@ -255,7 +255,7 @@ export async function getAllUserProjectService({req,res}){
       return {
         projectId: project.Project.projectId,
         projectName: project.Project.projectName,
-        projectThumbnail: project.Project?.projectThumbnail || null,
+        projectThumbnail: project.Project?.projectThumbnail ? getProtocol(req,"projects",project.Project.projectThumbnail) : null,
         batchId: project.Project.Batch.batchId,
         batchName: project.Project.Batch.batchName,
         courseId: project.Project.ProjectCourse.courseId,
@@ -360,21 +360,8 @@ export async function updateProjectService({req,res}){
         updateOnDuplicate: ['fieldValue'],
         transaction,
       });
-      
-      // Fetch related data
-      // const [batch, course, supervisor, newProject] = await Promise.all([
-      //   BatchModel.findByPk(batchId, { transaction }),
-      //   CourseModel.findByPk(courseId, {
-      //     include: [{ model: UserModel, as: "Coordinator" }],
-      //     transaction
-      //   }),
-      //   project.supervisorId
-      //     ? UserModel.findByPk(project.supervisorId, { transaction })
-      //     : null,
-      //   ProjectModel.findByPk(projectId,{transaction})
-      // ]);
 
-      const data = await getProjectByIdService(projectId);
+      const data = await getProjectByIdService(req,projectId);
       // return data;
       return data;
     } catch (error) {
@@ -388,12 +375,12 @@ export async function updateProjectService({req,res}){
   }, { ERROR_MESSAGE:"UPDATE PROJECT SERVICE" });
 }
 
-// move project to archive (NEW)
+// Move project to archive (NEW)
 export async function archiveProjectService({req,res}){
   const projectId = req.params.projectId; // ambil dari route / request
 
   return await withTransaction(async (transaction) => {
-    const project = await getProjectByIdService(projectId);
+    const project = await getProjectByIdService(req,projectId);
     let memberToInsert = project.projectTeamMembers;
     const [updatedCount] = await ProjectModel.update(
     {
@@ -445,15 +432,12 @@ export async function archiveProjectService({req,res}){
     // insert project member
     await ProjectMemberArchiveModel.bulkCreate(memberToInsert, {transaction});
 
-    return await ProjectArchiveModel.findOne({
-      where: { project_id: projectId },
-      transaction
-    });
+    return await getProjectArchiveByIdService({req,res},transaction);
   }, { ERROR_MESSAGE:"ARCHIVE PROJECT SERVICE" });
 }
 
-// get project by id (NEW)
-export async function getProjectByIdService(projectId,externalTransaction=false) {
+// Get project by id (NEW)
+export async function getProjectByIdService(req,projectId,externalTransaction=false) {
   const secondParameter = {
     ERROR_MESSAGE:"GET PROJECT BY ID",
   }
@@ -527,10 +511,11 @@ export async function getProjectByIdService(projectId,externalTransaction=false)
       ])
     }
   
-    const { Supervisor, ProjectCourse, Batch, ProjectMembers, ProjectFieldValues, id, ...detailProject } = project.toJSON();
+    const { Supervisor, ProjectCourse, Batch, ProjectMembers, ProjectFieldValues, id, projectThumbnail, ...detailProject } = project.toJSON();
     const data = {
       projectId: id,
       ...detailProject,
+      projectThumbnail: projectThumbnail ? getProtocol(req,"projects",projectThumbnail) : null,
       batchId: Batch.id,
       batchName: Batch.batchName,
       courseId: ProjectCourse?.id,
@@ -552,7 +537,6 @@ export async function getProjectByIdService(projectId,externalTransaction=false)
     return data;
   },secondParameter)
 }
-
 
 // Get all projects (Archived)
 export async function getAllProjectService({req,res}){
@@ -589,20 +573,36 @@ export async function getAllProjectService({req,res}){
       where: filters, 
       transaction
     });
+
+    const data = projects.docs.map((project) => ({
+      projectId: project.projectId,
+      projectName: project.projectName,
+      projectThumbnail: project.projectThumbnail ? getProtocol(req,"projects",project.projectThumbnail) : null,
+      batchId: project.batchId,
+      batchName: project.batchName,
+      courseId: project.courseId,
+      courseName: project.courseName,
+      courseCoordinatorName: project.courseCoordinatorName,
+      courseSupervisorId: project.courseSupervisorId,
+      courseSupervisorName: project.courseCoordinatorName,
+      projectCreatedAt: project.projectCreatedAt,
+      isFinal: project.isFinal
+    }));
+
     const result = {
       paginate: {
         currentPage: page,
         totalPages: projects.pages,
         totalItems: projects.total,
       },
-      data: projects.docs
+      data
     }
     return result;
   }, { ERROR_MESSAGE:"GET ALL PROJECTS SERVICE" });
 }
 
 // Get project by ID (Archived)
-export async function getProjectArchiveByIdService({req,res}){
+export async function getProjectArchiveByIdService({req,res},externalTransaction=null){
   const projectId = parseInt(req.params.projectId);
   
   if(!req.params.projectId){
@@ -617,6 +617,10 @@ export async function getProjectArchiveByIdService({req,res}){
     ])
   }
 
+  const secondparams = { ERROR_MESSAGE: "GET PROJECT ARCHIVE BY ID" };
+  if(externalTransaction) {
+    secondparams.externalTransaction = externalTransaction;
+  }
   return await withTransaction(async (transaction) => {
     // const projects = await ProjectArchiveModel.findAll({transaction});
     const findProject = await ProjectArchiveModel.findOne({
@@ -650,6 +654,7 @@ export async function getProjectArchiveByIdService({req,res}){
       userName: member.ArchivedUser.User.userName,
     }));
     delete project.ArchivedMembers;
+    project.projectThumbnail = getProtocol(req,"projects",project.projectThumbnail);
     return project;
-  }, { ERROR_MESSAGE:"GET PROJECT BY ID" });
+  },secondparams);
 }

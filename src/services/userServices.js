@@ -222,7 +222,7 @@ export async function getAllStudentService({req,res}) {
 // Update Lecturer by ID (Admin Only)
 export async function updateLecturerService({ req, res }) {
   const { userId } = req.params;
-  const { isApproved, isActive } = req.body;
+  const { isApproved } = req.body;
   const ROLE = getRole();
 
   
@@ -281,7 +281,7 @@ export async function updateLecturerService({ req, res }) {
       if(req.body.hasOwnProperty("isApproved")){
         if(!isApproved){
           await UserModel.update(
-            { isLecturerRequest: false, isAdminApprove: isApproved, isLecturerActive: false },
+            { isLecturerRequest: isApproved, isAdminApprove: isApproved, isLecturerActive: isApproved },
             { where: { id: userId }, transaction }
           );
 
@@ -314,20 +314,39 @@ export async function updateLecturerService({ req, res }) {
             }
           }
         }else{
+          // check if user already approved
+          if(user.isAdminApprove){
+            throw new ErrorHandler(400, "Bad Request", [
+              { field: "userId", message: "User already approved" }
+            ]);
+          }
+
           await UserModel.update(
-            { isAdminApprove: isApproved, isLecturerActive: true },
+            { isAdminApprove: isApproved, isLecturerActive: isApproved },
             { where: { id: userId }, transaction }
           );
   
-          await CourseModel.update(
-            { coordinatorId: userId },
-            { where: { id: user.Profile.EnrolledCourse.dataValues.courseId }, transaction }
-          )
+          // check if user role == 'coordinator'
+          if (user.Role.dataValues.roleName === "coordinator" || user.Role.dataValues.roleName === "supervisor") {
+            const courseId = user.toJSON()?.Profile?.EnrolledCourse?.courseId;
+            if (!courseId) {
+              console.log("User does not have a course ID");
+              throw new ErrorHandler(500,"Internal Server Error");
+            }
+            // check if user role == 'coordinator'
+            if (user.Role.dataValues.roleName === "coordinator") {
+              await CourseModel.update(
+                { coordinatorId: userId },
+                { where: { id: courseId }, transaction }
+              )
+            }
+
+            await SupervisorCourseModel.create({
+              courseId:user.Profile.EnrolledCourse.dataValues.courseId,
+              supervisorId:userId
+            },{transaction});
+          }
       
-          await SupervisorCourseModel.create({
-            courseId:user.Profile.EnrolledCourse.dataValues.courseId,
-            supervisorId:userId
-          },{transaction});
         }
       }
      
