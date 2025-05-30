@@ -3,13 +3,14 @@
  * SITE MAINTENANCE
  * --------
  * - Site update
+ * - Get Site data
  */
 
 import { withTransaction } from "./../utils/withTransaction.js";
 import { SiteDetailModel } from "./../models/index.js";
 import fs from 'fs/promises';
 import path from "path";
-import { checkIfExists } from "../utils/helper.js";
+import { checkIfExists, getProtocol } from "../utils/helper.js";
 
 export async function UpdateSiteService({req, res}) {
   const {title, textHeader, description} = req.body;
@@ -48,12 +49,31 @@ export async function UpdateSiteService({req, res}) {
     await SiteDetailModel.update(
       { title, textHeader, description, ...siteFile },
       { where: {id:1}, transaction });
-    const newData = await SiteDetailModel.findByPk(1,{ 
+    const newData = await getSiteService({ req, res }, transaction);
+    return newData;
+  },{ ERROR_MESSAGE: "Update Site Failed" });
+}
+
+// get site data service
+export async function getSiteService({req,res},externalTransaction=null) {
+  const secondParams = { ERROR_MESSAGE: "Get Site Failed" };
+  if(externalTransaction) {
+    secondParams.externalTransaction = externalTransaction;
+  }
+  return await withTransaction(async (transaction) => {
+    const siteData = await SiteDetailModel.findByPk(1,{ 
       attributes: {
         exclude: ["id", "createdAt", "updatedAt"]
        },
       transaction
     });
-    return newData;
-  },{ ERROR_MESSAGE: "Update Site Failed" });
+    let data = siteData.toJSON();
+    if(data.logo){
+      data.logo = getProtocol(req,"site",data.logo);
+    }
+    if(data.banner){
+      data.banner = getProtocol(req,"site",data.banner);
+    }
+    return data;
+  },secondParams);
 }

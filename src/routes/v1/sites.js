@@ -1,5 +1,5 @@
 import express from 'express';
-import { siteUpdate } from './../../controllers/siteController.js';
+import { getSite, siteUpdate } from './../../controllers/siteController.js';
 import { validateBody } from './../../validations/validation.js';
 import { updateSiteSchema } from './../../validations/siteValidations.js';
 import { uploadFile } from './../../utils/uploader.js';
@@ -13,8 +13,10 @@ const router = express.Router();
  * SITE MAINTENANCE
  * --------
  * - Site update
+ * - Get Site data
  */
 
 router.patch("/settings", authMiddleware, isWebMaintenance, validateBody(updateSiteSchema),uploadFile("site-settings").any(), checkUploads(["logo","banner"],siteSetting), siteUpdate);
+router.get("/settings", authMiddleware, isWebMaintenance, getSite);
 
 export default router;

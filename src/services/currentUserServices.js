@@ -1,7 +1,7 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { CourseModel, Database,RoleModel,SupervisorCourseModel,UserDetailModel,UserModel } from "../models/index.js";
 import { createVerifyResetToken } from "./../utils/createVerifyResetToken.js";
-import { checkIfExists, getRole, requestType } from "./../utils/helper.js";
+import { checkIfExists, getProtocol, getRole, requestType } from "./../utils/helper.js";
 import bcrypt from 'bcrypt';
 import { withTransaction } from "./../utils/withTransaction.js";
 import { createAuthToken } from "./../utils/createAuthToken.js";
@@ -93,6 +93,10 @@ export async function getCurrentUserService({req},{token = null, externalTransac
         return { token,data };
       }
   
+      if(data.userProfileImage){
+        data.userProfileImage = getProtocol(req,"profile",data.userProfileImage);
+      }
+
       return data;
     } catch (error) {
       console.log("GET CURRENT USER: ",error);

@@ -130,3 +130,11 @@ export async function checkIfExists(path) {
     return false; // Not exist
   }
 }
+
+export function getProtocol(req,customLocation,filename){
+  if(customLocation === null || customLocation === ""){
+    console.log("Path Location is required");
+    throw new ErrorHandler(500,"Internal Server Error");
+  }
+  return `${req.protocol}://${req.get("host")}/${customLocation}/${filename}`;
+}
