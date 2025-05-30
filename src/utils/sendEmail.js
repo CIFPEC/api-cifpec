@@ -42,7 +42,7 @@ const SendMail = async ({senderName, senderEmail},{to, subject, body}) => {
   });
 
   // send email
-  if(!+process.env.SEND_EMAIL){
+  if (process.env.ENVIROMENT_MODE === "Development"){
     console.log("NOTE: ","Email not sent in debug mode");
     return;
   }
