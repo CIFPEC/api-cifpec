@@ -9,7 +9,7 @@ export default function corsOptions(){
         callback(new Error('Not allow by CORS'));
       }
     },
-    methods:["GET", "POST", "PUT", "DELETE"],
+    methods:["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization","Verify-Token","Reset-Token"],
     credentials: true,
   }

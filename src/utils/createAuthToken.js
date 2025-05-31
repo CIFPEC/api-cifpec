@@ -50,7 +50,7 @@ export async function createAuthToken({req,res},user){
       ...userDetail,
       roleId: Role.roleId, 
       roleName: Role.roleName,
-      courseId: Profile?.courseId,
+      courseId: Profile?.courseId || null,
       batchId: Profile?.batchId || null 
     }
 
@@ -59,11 +59,22 @@ export async function createAuthToken({req,res},user){
     // check existing cookie token
     if (!req.cookies.token){
       // set cookies (http only)
-      res.cookie("token", ResreshToken, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
-      })
+      // check ENVIRONMENT_MODE
+      if (process.env.ENVIRONMENT_MODE !== "Production") {
+        res.cookie("token", ResreshToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "Lax",
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
+        })
+      } else {
+        res.cookie("token", ResreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "None",
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
+        })
+      }
 
       // create access token
       AccessToken = CreateAccessToken(prepareData);
@@ -76,11 +87,22 @@ export async function createAuthToken({req,res},user){
       });
     }else{
       // set cookies (http only)
-      res.cookie("token", ResreshToken, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
-      })
+      // check ENVIRONMENT_MODE
+      if(process.env.ENVIRONMENT_MODE !== "Production") {
+        res.cookie("token", ResreshToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "Lax",
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
+        })
+      }else{
+        res.cookie("token", ResreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "None",
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours or 1 day
+        })
+      }
 
       // update session
       await SessionModel.update({

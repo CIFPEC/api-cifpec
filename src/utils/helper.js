@@ -15,7 +15,7 @@ export function getRandomNumber(minimum, maximum) {
 export async function getLocation(){
   let response;
   try {
-    if (process.env.ENVIROMENT_MODE === "Development") {
+    if (process.env.ENVIRONMENT_MODE === "Development") {
       response = await geojs();
     }else{
       response = await axios.get("https://get.geojs.io/v1/ip/geo.json");

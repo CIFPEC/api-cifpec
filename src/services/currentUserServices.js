@@ -29,7 +29,7 @@ export async function getCurrentUserService({req},{token = null, externalTransac
       if (req.user.roleId === roleId.ADMIN || req.user.roleId === roleId.WEB_MAINTENANCE){
         user = await UserModel.findOne({
           where: { id: req.user.userId },
-          attributes: ["userName", "userEmail", "isVerify", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          attributes: ["userName", "userEmail", "isVerify", "isLecturerActive", "isLecturerRequest", "isAdminApprove", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
           include: [
             {
               model: RoleModel,
@@ -48,7 +48,7 @@ export async function getCurrentUserService({req},{token = null, externalTransac
         // find user
         user = await UserModel.findOne({
           where: { id: req.user.userId },
-          attributes: ["userName", "userEmail", "isVerify", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
+          attributes: ["userName", "userEmail", "isVerify", "isLecturerActive", "isLecturerRequest", "isAdminApprove", ["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
           include: [
             {
               model: RoleModel,
@@ -83,7 +83,10 @@ export async function getCurrentUserService({req},{token = null, externalTransac
         userRole: user.Role,
         joinDate: user.joinDate,
         lastUpdate: user.lastUpdate,
-        isVerify: user.isVerify
+        isVerify: user.isVerify,
+        isLecturerActive: user.isLecturerActive,
+        isLecturerRequest: user.isLecturerRequest,
+        isAdminApprove: user.isAdminApprove
       } 
   
       if (user.Profile.EnrolledCourse){
@@ -108,15 +111,15 @@ export async function getCurrentUserService({req},{token = null, externalTransac
 // Update Current User
 export async function updateCurrentUserService({req,res},requestData){
   let currentType = null;
-  const { userEmail, userName, userUsername, userGender, userPhone, userProfileImage } = requestData;
+  const { userEmail, userName, userUsername, userGender, userPhoneNumber } = requestData;
   const updateData = { 
     newEmail: userEmail,
     userName,
     userUsername, 
     userGender, 
-    userPhone, 
-    userProfileImage
+    userPhone: userPhoneNumber
   };
+  console.log("UPDATE CURRENT USER: ",requestData);
   
   if(userEmail){
     if ((userEmail.toLowerCase()) !== (req.user.userEmail.toLowerCase())) {
@@ -145,6 +148,7 @@ export async function updateCurrentUserService({req,res},requestData){
 
     // update user
     await UserModel.update(updateData,{where:{id:req.user.userId},transaction});
+    await UserDetailModel.update(updateData,{where:{userId:req.user.userId},transaction});
 
     // check if user profile image exist
     if (req.files && req.files.length > 0) {

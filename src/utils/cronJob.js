@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import { SessionModel, UserModel, VerifyModel } from "./../models/index.js";
+import { withTransaction } from "./withTransaction.js";
 
 async function deleteUserExpiredSession() {
   return await withTransaction(async (transaction) => {

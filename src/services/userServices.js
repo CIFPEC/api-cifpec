@@ -1,5 +1,5 @@
 import { withTransaction } from "./../utils/withTransaction.js";
-import { getRole } from './../utils/helper.js';
+import { getProtocol, getRole } from './../utils/helper.js';
 import { Op } from "sequelize";
 import { BatchModel, CourseModel, ProjectModel, RoleModel, SupervisorCourseModel, UserDetailModel, UserModel } from "./../models/index.js";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
@@ -33,6 +33,16 @@ export async function getAllLecturerService({req,res}) {
     isVerify: true,
     isAdminApprove: true,
   };
+  // if request query isApproved
+  if (req.query.isApproved) {
+    // check value isApproved
+    if (req.query.isApproved === "true") {
+      whereCondition.isAdminApprove = true;
+    }else if (req.query.isApproved === "false") {
+      whereCondition.isAdminApprove = false;
+      whereCondition.isLecturerRequest = true;
+    }
+  }
 
   // If course filter exists
   const courseFilter = req.query.course
@@ -67,7 +77,6 @@ export async function getAllLecturerService({req,res}) {
           {
             model: CourseModel,
             as: "EnrolledCourse",
-            required: true,
             attributes: [["id", "courseId"], ["name", "courseName"]],
             where: courseFilter,
           }
@@ -88,10 +97,14 @@ export async function getAllLecturerService({req,res}) {
       const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
 
       // Extract EnrolledCourse if exists
-      const { EnrolledCourse, ...profileRest } = Profile || {};
+      const EnrolledCourse = Profile?.EnrolledCourse || {};
       return {
         ...rest,
-        ...profileRest,                 // flatten Profile
+        userId: Profile?.userId,        
+        userName: Profile?.userUsername,
+        userGender: Profile?.userGender,
+        userPhone: Profile?.userPhone,
+        userProfileImage: Profile?.userProfileImage ? getProtocol(req,"profile",Profile?.userProfileImage) : null,
         userRole: Role,              // rename Role to userRole
         userCourse: EnrolledCourse
       };
@@ -253,7 +266,6 @@ export async function updateLecturerService({ req, res }) {
               {
                 model: CourseModel,
                 as: "EnrolledCourse",
-                required: true,
                 attributes: [["id", "courseId"], ["name", "courseName"]],
               }
             ]
@@ -371,7 +383,6 @@ export async function updateLecturerService({ req, res }) {
               {
                 model: CourseModel,
                 as: "EnrolledCourse",
-                required: true,
                 attributes: [["id", "courseId"], ["name", "courseName"]],
               }
             ]
@@ -385,12 +396,16 @@ export async function updateLecturerService({ req, res }) {
       });
       
       const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
-      const { EnrolledCourse, ...restProfile } = Profile || {};
-  
+      // Extract EnrolledCourse if exists
+      const EnrolledCourse = Profile?.EnrolledCourse || {};
       return {
         ...rest,
-        ...restProfile,
-        userRole: Role,
+        userId: Profile?.userId,
+        userName: Profile?.userUsername,
+        userGender: Profile?.userGender,
+        userPhone: Profile?.userPhone,
+        userProfileImage: Profile?.userProfileImage ? getProtocol(req, "profile", Profile?.userProfileImage) : null,
+        userRole: Role,              // rename Role to userRole
         userCourse: EnrolledCourse
       };
     }, { ERROR_MESSAGE: "UPDATE LECTURER" });
@@ -423,7 +438,6 @@ export async function updateLecturerService({ req, res }) {
               {
                 model: CourseModel,
                 as: "EnrolledCourse",
-                required: true,
                 attributes: [["id", "courseId"], ["name", "courseName"]],
               }
             ]
@@ -434,15 +448,15 @@ export async function updateLecturerService({ req, res }) {
           isVerify: true
         },
       });
-
+      
       if (!user) {
         throw new ErrorHandler(404, "Not Found", [
           { parameter: "userId", message: "you are not authorized" },
         ]);
       }
-
+      
       // check if profile is incomplete
-      const UserRequest = user.toJSON();
+      const UserRequest = user?.toJSON();
       if (!UserRequest.userName || !UserRequest.Profile.userUsername || !UserRequest.Profile.userGender || !UserRequest.Profile.userPhone) {
         throw new ErrorHandler(400, "Bad Request", [
           { parameter: "userId", message: "User profile is incomplete. Please update it to continue." },
@@ -481,7 +495,6 @@ export async function updateLecturerService({ req, res }) {
               {
                 model: CourseModel,
                 as: "EnrolledCourse",
-                required: true,
                 attributes: [["id", "courseId"], ["name", "courseName"]],
               }
             ]
@@ -495,7 +508,8 @@ export async function updateLecturerService({ req, res }) {
       });
 
       const { Role, Profile, ...rest } = user.toJSON(); // convert instance to plain object
-      const { EnrolledCourse, ...restProfile } = Profile || {};
+      const EnrolledCourse = Profile?.EnrolledCourse || {};
+      const { ...restProfile } = Profile || {};
 
       return {
         ...rest,

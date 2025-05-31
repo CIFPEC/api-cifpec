@@ -78,7 +78,7 @@ export async function getCourseServices({req,res}){
 
   try {
     // get all data limit with sequelize-paginate
-    const courses = await CourseModel.paginate({page,paginate:limit});
+    const courses = await CourseModel.paginate({ page, paginate: limit, order: [["created_at", "DESC"]] });
     const allCourse = await Promise.all( courses.docs.map(async(singleCourse)=>{
       if(singleCourse.coordinatorId === null){
         return {
