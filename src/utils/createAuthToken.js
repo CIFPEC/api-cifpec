@@ -7,7 +7,7 @@ export async function createAuthToken({req,res},user){
   try {
     // const Role = await RoleModel.findOne({where: {id: user.roleId},attributes: [["id","roleId"],["name","roleName"]]});
     const User = await UserModel.findOne({
-      attributes:[["id","userId"],"userEmail",],
+      attributes:[["id","userId"],"userEmail","isAdminApprove"],
       include: [
         {
           model: RoleModel,
@@ -40,18 +40,20 @@ export async function createAuthToken({req,res},user){
       where:{id:user.id}
     });
 
-    const { Profile, Role, ...userDetail } = User.toJSON();
+    const { Profile, Role, userId, userEmail, isAdminApprove } = User.toJSON();
     const { EnrolledCourse } = Profile || {};
     const { coursesInBatch } = EnrolledCourse || {};
     const [ course ] = coursesInBatch || [];
 
     let AccessToken;
     const prepareData = { 
-      ...userDetail,
+      userId,
+      userEmail,
       roleId: Role.roleId, 
       roleName: Role.roleName,
       courseId: Profile?.courseId || null,
-      batchId: Profile?.batchId || null 
+      batchId: Profile?.batchId || null,
+      isApproved: isAdminApprove
     }
 
     // create refresh token
