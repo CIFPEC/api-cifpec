@@ -48,6 +48,7 @@ export async function getBatchService({ req }) {
               ["field_name", "label"],
               ["field_type", "type"],
               ["is_required", "required"],
+              ["field_tag", "tag"],
             ],
           }
         ]
@@ -71,7 +72,8 @@ export async function getBatchService({ req }) {
         projectRequirements: batch.projectRequirements.map((field) => ({
           label: field.dataValues.label,
           type: field.dataValues.type,
-          required: !!field.dataValues.required
+          required: !!field.dataValues.required,
+          tag: field.dataValues.tag
         }))
       }
 

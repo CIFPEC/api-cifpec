@@ -225,7 +225,7 @@ export async function getAllUserProjectService({req,res}){
                     {
                       model: BatchFieldModel,
                       as: "BatchField",
-                      attributes: ["fieldName"],
+                      attributes: ["fieldName","fieldType"],
                     }
                   ],
                 },
@@ -268,7 +268,8 @@ export async function getAllUserProjectService({req,res}){
         projectRequirements: project.Project.ProjectFieldValues.map((field) => {
           return {
             fieldName: field.BatchField.fieldName,
-            fieldValue: field.fieldValue,
+            fieldValue: field.BatchField.fieldType === "file" ? getProtocol(req,"projects",field.fieldValue) : field.fieldValue,
+            fieldType: field.BatchField.fieldType,
           };
         }),
         projectTeamMembers: project.Project.ProjectMembers.map((member) => {
@@ -381,6 +382,18 @@ export async function archiveProjectService({req,res}){
 
   return await withTransaction(async (transaction) => {
     const project = await getProjectByIdService(req,projectId);
+    
+    // remove req protocol on projectRequirements fileValue
+    project.projectRequirements.map(requirement => {
+      if(requirement.fieldType === "file"){
+        requirement.fieldValue = requirement.fieldValue.split("/").pop();
+      }
+      return requirement;
+    });
+
+    // remove req protocol on projectThumbnail
+    project.projectThumbnail = project.projectThumbnail.split("/").pop();
+
     let memberToInsert = project.projectTeamMembers;
     const [updatedCount] = await ProjectModel.update(
     {
@@ -526,7 +539,8 @@ export async function getProjectByIdService(req,projectId,externalTransaction=fa
       projectCreatedAt: ProjectCourse?.createdAt,
       projectRequirements: ProjectFieldValues.map((fieldValue) => ({
         fieldName: fieldValue?.BatchField?.fieldName,
-        fieldValue: fieldValue?.fieldValue
+        fieldValue: fieldValue?.BatchField?.fieldType === "file" ? getProtocol(req,"projects",fieldValue?.fieldValue) : fieldValue?.fieldValue,
+        fieldType: fieldValue?.BatchField?.fieldType
       })),
       projectTeamMembers: ProjectMembers.map((member) => ({
         userId: member.User.id,
@@ -655,6 +669,11 @@ export async function getProjectArchiveByIdService({req,res},externalTransaction
     }));
     delete project.ArchivedMembers;
     project.projectThumbnail = getProtocol(req,"projects",project.projectThumbnail);
+    project.projectRequirements = project.projectRequirements.map((requirement) => ({
+      fieldName: requirement.fieldName,
+      fieldValue: requirement.fieldType === "file" ? getProtocol(req,"projects",requirement.fieldValue) : requirement.fieldValue,
+      fieldType: requirement.fieldType
+    }));
     return project;
   },secondparams);
 }

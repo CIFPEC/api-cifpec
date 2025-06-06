@@ -56,7 +56,7 @@ export async function getAllLecturerService({req,res}) {
 
   const Options = {
     attributes: {
-      exclude: ["id", "userPassword", "role_id", "roleId", "isLecturerRequest", "createdAt", "updatedAt"],
+      exclude: ["id", "userPassword", "role_id", "roleId", "isLecturerRequest", "newEmail", "createdAt", "updatedAt"],
       include: [["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
     },
     where: whereCondition,
@@ -101,7 +101,7 @@ export async function getAllLecturerService({req,res}) {
       return {
         ...rest,
         userId: Profile?.userId,        
-        userName: Profile?.userUsername,
+        userUsername: Profile?.userUsername,
         userGender: Profile?.userGender,
         userPhone: Profile?.userPhone,
         userProfileImage: Profile?.userProfileImage ? getProtocol(req,"profile",Profile?.userProfileImage) : null,
@@ -150,7 +150,7 @@ export async function getAllStudentService({req,res}) {
 
   const Options = {
     attributes: {
-      exclude: ["id", "userPassword", "role_id", "roleId", "isLecturerRequest", "createdAt", "updatedAt"],
+      exclude: ["id", "userPassword", "role_id", "roleId", "isLecturerRequest", "newEmail", "createdAt", "updatedAt"],
       include: [["created_at", "joinDate"], ["updated_at", "lastUpdate"]],
     },
     where: whereCondition,
@@ -217,6 +217,7 @@ export async function getAllStudentService({req,res}) {
         ...rest,
         ...profileRest,                 // flatten Profile
         userRole: Role,              // rename Role to userRole
+        userProfileImage : Profile?.userProfileImage ? getProtocol(req,"profile",Profile?.userProfileImage) : null,
         userCourse: EnrolledCourse
       };
     });

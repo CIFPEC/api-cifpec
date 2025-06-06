@@ -2,7 +2,7 @@ import express from 'express';
 import { validateBody } from './../../validations/validation.js';
 import { createBatch, getAllBatches, getAllProjectByBatch, getBatchById, getProjectInBatchById, updateBatchById } from './../../controllers/batchController.js';
 import { createAndUpdateBatchSchema } from './../../validations/batchValidations.js';
-import { authMiddleware, isAdmin, isStudent } from '../../middlewares/authMiddleware.js';
+import { authMiddleware, customMiddleware, isAdmin, isStudent } from '../../middlewares/authMiddleware.js';
 const router = express.Router();
 
 /**
@@ -21,7 +21,7 @@ const router = express.Router();
 // Get all batches
 router.get("/",getAllBatches);
 // get batch by id
-router.get("/:id" ,authMiddleware ,isAdmin,getBatchById);
+router.get("/:id" ,authMiddleware ,customMiddleware({include: ["admin", "student"]}),getBatchById);
 // Create batch
 router.post("/", authMiddleware, isAdmin,validateBody(createAndUpdateBatchSchema),createBatch);
 // Update batch

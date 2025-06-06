@@ -1,6 +1,6 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import jwt from 'jsonwebtoken';
-import {Database, SessionModel} from "./../models/index.js";
+import {Database, SessionModel, UserModel} from "./../models/index.js";
 import { CreateAccessToken } from "./../utils/helper.js";
 import { withTransaction } from "./../utils/withTransaction.js";
 
@@ -33,12 +33,27 @@ export async function renewAccessTokenService(req,res) {
         {header: "Authorization", message: "Token is expired"},
       ]);
     }
-  
+
+    // check user is admin or not
+    const user = await UserModel.findOne({
+      where:{id:checkRefreshToken.userId},
+      attributes: ["isAdminApprove"],
+    }, {transaction});
+
+    if(!user) {
+      throw new ErrorHandler(403, "Forbidden",[
+        {header: "Authorization", message: "Invalid token"},
+      ]);
+    }
+    const isApproved = user?.toJSON()?.isAdminApprove;
+
     // verify refresh token
     try {
       const decoded = jwt.verify(refreshToken, process.env.SECRET_KEY);
       delete decoded.iat;
       delete decoded.exp;
+      delete decoded.isApproved;
+      decoded.isApproved = isApproved;
 
       // create access token
       return CreateAccessToken(decoded);

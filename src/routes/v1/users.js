@@ -16,7 +16,7 @@ const router = express.Router();
  * - Get all students (in batch and course) - in batch route
  */
 
-router.get("/lecturers", authMiddleware, isAdmin, getAllLecturer);
+router.get("/lecturers", authMiddleware, customMiddleware({include: ["admin", "student"]}), getAllLecturer);
 router.patch("/:userId/lecturers", authMiddleware, customMiddleware({exclude: ["student"]}) , validateBody(updateLecturerSchema), updateLecturer);
 router.get("/students", authMiddleware, getAllStudent);
 
