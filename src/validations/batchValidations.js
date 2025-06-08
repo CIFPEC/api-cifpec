@@ -26,6 +26,7 @@ export const createAndUpdateBatchSchema = Joi.object({
   projectRequirements: Joi.array()
     .items(
       Joi.object({
+        fieldId: Joi.number().integer(),
         label: Joi.string().required().messages({
           "any.required": "Label is required",
           "string.empty": "Label cannot be empty",

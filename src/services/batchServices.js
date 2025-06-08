@@ -49,6 +49,7 @@ export async function getBatchService({ req }) {
               ["field_type", "type"],
               ["is_required", "required"],
               ["field_tag", "tag"],
+              ["id", "fieldId"],
             ],
           }
         ]
@@ -70,6 +71,7 @@ export async function getBatchService({ req }) {
         startDate: batch.startDate,
         endDate: batch.endDate,
         projectRequirements: batch.projectRequirements.map((field) => ({
+          fieldId: field.dataValues.fieldId,
           label: field.dataValues.label,
           type: field.dataValues.type,
           required: !!field.dataValues.required,
@@ -119,7 +121,8 @@ export async function getBatchService({ req }) {
             ["field_name", "label"],
             ["field_type", "type"],
             [Sequelize.literal("IF(is_required IS NOT NULL AND is_required = 1, TRUE, FALSE)"), "required"],
-            ["field_tag", "tag"]
+            ["field_tag", "tag"],
+            ["id", "fieldId"],
           ],
         }
       ],
@@ -167,7 +170,8 @@ export async function getBatchService({ req }) {
           label: row['projectRequirements.label'],
           type: row['projectRequirements.type'],
           required: !!row['projectRequirements.required'],
-          tag: row['projectRequirements.tag']
+          tag: row['projectRequirements.tag'],
+          fieldId: row['projectRequirements.fieldId']
         });
       }
     });
@@ -374,67 +378,53 @@ export async function updateBatchService({ req, res }, batchRequest) {
       }
     );
 
-    // Handle Batch Fields (Project Requirements)
+    // =====
+
+    // Get all existing fields
     const existingFields = await BatchFieldModel.findAll({
       where: { batchId },
-      attributes: ["id", "fieldName", "fieldType", "isRequired", "fieldTag"]
+      attributes: ["id"]
     });
 
-    // relabel projectRequirements
-    const newFields = projectRequirements.map((req) => ({
-      fieldName: req.label,
-      fieldType: req.type,
-      isRequired: req.required || false, // set default value if user not set
-      fieldTag: req.tag
-    }));
+    // Senarai ID field yang masih ada
+    const updatedFieldIds = projectRequirements.filter(f => !!f.fieldId).map(f => f.fieldId);
+    const existingFieldIds = existingFields.map(f => f.id);
 
-    // find data to delete
-    const fieldsToDelete = existingFields.filter(
-      (field) => !newFields.some((newField) => newField.fieldName === field.fieldName)
-    );
-
-    // Delete fields user remove
-    if (fieldsToDelete.length > 0) {
-      await BatchFieldModel.destroy({
-        where: { id: fieldsToDelete.map((field) => field.id) },
-        transaction
-      });
+    // Delete field yang dah dibuang
+    const fieldIdsToDelete = existingFieldIds.filter(id => !updatedFieldIds.includes(id));
+    if (fieldIdsToDelete.length > 0) {
+      await BatchFieldModel.destroy({ where: { id: fieldIdsToDelete }, transaction });
     }
 
-    // find data to update example (label/type/required)
-    const fieldsToUpdate = existingFields.filter((field) =>
-      newFields.some(
-        (newField) =>
-          newField.fieldName === field.fieldName &&
-          (newField.fieldType !== field.fieldType || newField.isRequired !== field.isRequired || newField.fieldTag !== field.fieldTag)
-      )
-    );
-
-    for (const field of fieldsToUpdate) {
-      const newField = newFields.find((nf) => nf.fieldName === field.fieldName);
-      await BatchFieldModel.update(
-        { fieldType: newField.fieldType, isRequired: newField.isRequired, fieldTag: newField.fieldTag },
-        { where: { id: field.id }, transaction }
-      );
+    // Loop semua field baru & lama
+    for (const field of projectRequirements) {
+      if (field.fieldId) {
+        console.log("FIELD: ",field);
+        // Field lama → update
+        await BatchFieldModel.update(
+          {
+            fieldName: field.label,
+            fieldType: field.type,
+            isRequired: field.required || false,
+            fieldTag: field.tag
+          },
+          { where: { id: field.fieldId }, transaction }
+        );
+      } else {
+        // Field baru → insert
+        await BatchFieldModel.create(
+          {
+            batchId,
+            fieldName: field.label,
+            fieldType: field.type,
+            isRequired: field.required || false,
+            fieldTag: field.tag
+          },
+          { transaction }
+        );
+      }
     }
-    
-    // Bulk create for create/update new fields
-    const fieldsToInsert = newFields.filter(
-      (newField) => !existingFields.some((field) => field.fieldName === newField.fieldName)
-    );
 
-    if (fieldsToInsert.length > 0) {
-      await BatchFieldModel.bulkCreate(
-        fieldsToInsert.map((field) => ({
-          batchId,
-          fieldName: field.fieldName,
-          fieldType: field.fieldType,
-          isRequired: field.isRequired,
-          tag: field.fieldTag
-        })),
-        { transaction }
-      );
-    }
 
     // Get all data after update
     const updatedBatch = await BatchModel.findByPk(batchId, {
