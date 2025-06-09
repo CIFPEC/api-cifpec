@@ -1,6 +1,6 @@
+import "dotenv/config";
 import jwt from "jsonwebtoken";
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import "dotenv/config";
 
 export function checkToken(req, res, next) {
   // get bearer token from header

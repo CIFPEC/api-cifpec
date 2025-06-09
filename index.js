@@ -1,5 +1,5 @@
-import express from "express";
 import "dotenv/config";
+import express from "express";
 import router from "./src/routes/index.js";
 import { middlewareError,sequelizeError } from "./src/validations/validation.js";
 import cookieParser from "cookie-parser";

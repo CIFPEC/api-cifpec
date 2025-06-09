@@ -426,7 +426,7 @@ export async function archiveProjectService({req,res}){
       projectId: projectId,
       userId: member.userId
     }));
-
+    
     // check project member archive if project ID and user ID is exist
     const projectMemberArchive = await ProjectMemberArchiveModel.findOne({
       where: { project_id: projectId },
@@ -441,7 +441,7 @@ export async function archiveProjectService({req,res}){
     // update projectTeamMembers
     project.projectTeamMembers = project.projectTeamMembers.map(member => member.userId);
     await ProjectArchiveModel.create(project, {transaction});
-
+    
     // insert project member
     await ProjectMemberArchiveModel.bulkCreate(memberToInsert, {transaction});
 

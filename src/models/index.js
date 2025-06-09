@@ -69,8 +69,8 @@ ProjectMemberArchives.belongsTo(ProjectArchives,{foreignKey:"project_id", target
 ProjectArchives.hasMany(ProjectMemberArchives,{foreignKey:"project_id", sourceKey:"projectId", as:"ArchivedMembers"});
 
 // project_members_archives.user_id < user_details.user_id
-ProjectMemberArchives.belongsTo(UserDetails,{foreignKey:"user_id", as:"ArchivedUser"});
-UserDetails.hasMany(ProjectMemberArchives,{foreignKey:"user_id", as:"ArchivedProjects"});
+ProjectMemberArchives.belongsTo(UserDetails,{foreignKey:"user_id", targetKey:"userId", as:"ArchivedUser"});
+UserDetails.hasMany(ProjectMemberArchives,{foreignKey:"user_id", sourceKey:"userId", as:"ArchivedProjects"});
 
 /*
 NOTE projects to batch_fields (many-to-many)

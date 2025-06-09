@@ -7,6 +7,7 @@ import users from "./users.js";
 import projects from "./projects.js";
 import sites from "./sites.js";
 import roles from "./roles.js";
+import dashboard from "./dashboard.js";
 import { renewToken } from "./../../controllers/authController.js";
 
 const router = express.Router();
@@ -27,5 +28,6 @@ router.use("/users", users);
 router.use("/projects", projects);
 router.use("/site", sites);
 router.use("/roles", roles);
+router.use("/dashboard", dashboard);
 
 export default router;
