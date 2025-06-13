@@ -24,7 +24,7 @@ const router = express.Router();
 
 // Get Current User
 router.get("/profile",authMiddleware, getCurrentUser);
-router.patch("/profile" ,authMiddleware ,validateBody(updateCurrentUserSchema), uploadFile("profile").any(), checkUploads(["userProfileImage"],profileImage), updateCurrentUser);
+router.patch("/profile" ,authMiddleware ,uploadFile("profile").any(),validateBody(updateCurrentUserSchema),  checkUploads(["userProfileImage"],profileImage), updateCurrentUser);
 router.patch("/profile/password" ,authMiddleware ,validateBody(updateCurrentUserPasswordSchema), updateCurrentUserPassword);
 router.post("/profile/email/verify/request" ,authMiddleware ,validateBody(requestCodeSchema) ,requestCodeVerifyEmail);
 router.post("/profile/email/verify" ,authMiddleware, validateBody(verifySchema), verifyEmail);

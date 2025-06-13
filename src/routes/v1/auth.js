@@ -16,7 +16,7 @@ router.post("/register",validateBody(registerSchema), register);
 // login
 router.post("/login",validateBody(loginSchema), login);
 // logout
-router.delete("/logout",authMiddleware,logout);
+router.delete("/logout",logout);
 
 /** 
  * ======

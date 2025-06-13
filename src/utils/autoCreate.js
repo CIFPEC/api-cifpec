@@ -10,11 +10,11 @@ export function Create_Roles() {
 
 export function Create_Courses() {
   return [
-    { courseName: "Web Development" },
-    { courseName: "Mobile Development" },
-    { courseName: "Game Development" },
-    { courseName: "UI/UX Design" },
-    { courseName: "Data Science" },
+    { courseName: "Diploma Teknologi Komputer (Sistem)" },
+    { courseName: "Diploma Teknologi Mekatronik" },
+    { courseName: "Diploma Teknologi Telekomunikasi" },
+    { courseName: "Diploma Teknologi Automotif Servis" },
+    { courseName: "Diploma Teknologi Pembuatan (Perkakasan-Dai)" },
     { courseName: "Machine Learning" },
   ]
 }

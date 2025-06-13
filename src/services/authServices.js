@@ -186,7 +186,7 @@ export async function logoutService(req,res){
   const transaction = await Database.transaction(); 
   try {
     // compare refresh token from client and database
-    const checkRefreshToken = await SessionModel.findOne({where:{sessionToken:refreshToken,userId:req.user.userId}});
+    const checkRefreshToken = await SessionModel.findOne({where:{sessionToken:refreshToken}});
     if(!checkRefreshToken) {
       throw new ErrorHandler(403, "Forbidden",[
         {header: "Token", message: "Invalid token"},

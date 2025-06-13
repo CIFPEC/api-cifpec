@@ -30,6 +30,15 @@ const UserDetails = Database.define("user_detail",
       onUpdate: "CASCADE",
       field:"user_id"
     },
+    nric: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+      unique: {
+        args: true,
+        msg: "NRIC already exists!"
+      },
+      field: "nric"
+    },
     // - username
     userUsername: {
       type: DataTypes.STRING,

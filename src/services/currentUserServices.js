@@ -39,7 +39,7 @@ export async function getCurrentUserService({req},{token = null, externalTransac
             {
               model: UserDetailModel,
               as: "Profile",
-              attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"]
+              attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage", "nric"],
             }
           ],
           transaction
@@ -58,7 +58,7 @@ export async function getCurrentUserService({req},{token = null, externalTransac
             {
               model: UserDetailModel,
               as: "Profile",
-              attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage"],
+              attributes: ["userId", "userUsername", "userGender", "userPhone", "userProfileImage", "nric"],
               include: [
                 {
                   model: CourseModel,
@@ -76,6 +76,7 @@ export async function getCurrentUserService({req},{token = null, externalTransac
         userId: user.Profile.userId,
         userName: user.userName,
         userEmail: user.userEmail,
+        nric: user?.Profile?.nric,
         userUsername: user.Profile.userUsername,
         userGender: user.Profile.userGender,
         userPhoneNumber: user.Profile.userPhone,
@@ -111,13 +112,14 @@ export async function getCurrentUserService({req},{token = null, externalTransac
 // Update Current User
 export async function updateCurrentUserService({req,res},requestData){
   let currentType = null;
-  const { userEmail, userName, userUsername, userGender, userPhoneNumber } = requestData;
+  const { userEmail, userName, userUsername, userGender, userPhone, nric } = requestData;
   const updateData = { 
     newEmail: userEmail,
     userName,
     userUsername, 
     userGender, 
-    userPhone: userPhoneNumber
+    userPhone,
+    nric
   };
   console.log("UPDATE CURRENT USER: ",requestData);
   

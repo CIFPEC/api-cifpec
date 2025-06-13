@@ -140,11 +140,21 @@ export const updateCurrentUserSchema = Joi.object({
   userEmail: Joi.string().email().optional().messages({
     'string.email': 'Invalid email format.',
   }),
-  userName: Joi.string().optional(),
-  userUsername: Joi.string().min(3).optional(),
-  userGender: Joi.string().optional(),
-  userPhone: Joi.number().min(10).optional(),
-  userProfileImage: Joi.string().optional()
+  userName: Joi.string().required(),
+  userUsername: Joi.string().min(3).required(),
+  userGender: Joi.string().valid("Male", "Female").required().messages({
+    'string.base': 'Gender must be a string.',
+    'any.required': 'Gender is required.',
+    "any.only": 'Gender must be either "Male" or "Female".',
+  }),
+  userPhone: Joi.string().pattern(/^\d{10,}$/).required().messages({
+    'number.base': 'Phone number must be a number.',
+    'string.pattern.base': 'Phone number must be at least 10 digits.',
+  }),
+  nric: Joi.string().pattern(/^\d{12}$/).required().messages({
+    'number.base': 'NRIC must be a number.',
+    'string.pattern.base': 'NRIC must be exactly 12 digits.',
+  }),
 });
 
 // update current user password
