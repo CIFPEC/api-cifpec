@@ -11,11 +11,14 @@ export function Create_Roles() {
 export function Create_Courses() {
   return [
     { courseName: "Diploma Teknologi Komputer (Sistem)" },
-    { courseName: "Diploma Teknologi Mekatronik" },
-    { courseName: "Diploma Teknologi Telekomunikasi" },
-    { courseName: "Diploma Teknologi Automotif Servis" },
-    { courseName: "Diploma Teknologi Pembuatan (Perkakasan-Dai)" },
-    { courseName: "Machine Learning" },
+  ]
+}
+
+export function Create_Categories() {
+  return [
+    { categoryName: "Teknologi Maklumat", categoryCode: "TMK" },
+    { categoryName: "Elektrik dan Elektronik", categoryCode: "ELK" },
+    { categoryName: "Mekanikal", categoryCode: "MEK" },
   ]
 }
 

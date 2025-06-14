@@ -16,7 +16,8 @@ import ProjectMemberArchives from './ProjectMemberArchiveModel.js';
 import ProjectArchives from "./projectArchiveModel.js";
 import SupervisorCourses from './supervisorCourseModel.js';
 import Sessions from "./sessionModel.js";
-import { Create_Roles, Create_Courses, Create_DataSite } from "./../utils/autoCreate.js";
+import Categories from './categoryModel.js';
+import { Create_Roles, Create_Courses, Create_DataSite, Create_Categories } from "./../utils/autoCreate.js";
 
 // users.id - user_details.user_id
 Users.hasOne(UserDetails, { foreignKey: "user_id", as: "Profile" });
@@ -61,6 +62,9 @@ Batches.hasMany(BatchFields, { foreignKey: "batch_id", as: "projectRequirements"
 // courses.coordinator_id - users.id
 Courses.belongsTo(Users,{foreignKey:"coordinator_id",as:"Coordinator"});
 Users.hasOne(Courses,{foreignKey:"coordinator_id",as:"ManagedCourse"});
+
+Projects.belongsTo(Categories, { foreignKey: 'category_id', as: 'Category' });
+Categories.hasMany(Projects, { foreignKey: 'category_id', as: 'Projects' });
 
 // ARCHIVE TABLE
 // =============
@@ -144,8 +148,10 @@ Users.belongsToMany(Projects,{through:ProjectMembers, as:"Projects",foreignKey:"
         const ROLES = Create_Roles();
         const COURSES = Create_Courses();
         const SITE = Create_DataSite();
+        const CATEGORIES = Create_Categories();
         await Roles.bulkCreate(ROLES);
         await Courses.bulkCreate(COURSES);
+        await Categories.bulkCreate(CATEGORIES);
         await SiteDetails.create(SITE);
       }else{
         await Database.sync({force: false});
@@ -176,5 +182,6 @@ export {
   ProjectArchives as ProjectArchiveModel,
   ProjectMemberArchives as ProjectMemberArchiveModel,
   SupervisorCourses as SupervisorCourseModel,
-  Sessions as SessionModel 
+  Sessions as SessionModel,
+  Categories as CategoryModel 
 };
