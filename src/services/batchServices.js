@@ -1,6 +1,6 @@
 import { ErrorHandler } from "./../exceptions/errorHandler.js";
-import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database, ProjectModel, UserModel, ProjectFieldValueModel, UserDetailModel, ProjectMemberModel } from "./../models/index.js";
-import { Sequelize } from "sequelize";
+import { BatchCourseModel, BatchModel, BatchFieldModel, CourseModel, Database, ProjectModel, UserModel, ProjectFieldValueModel, UserDetailModel, ProjectMemberModel, CategoryModel } from "./../models/index.js";
+import { Op, Sequelize } from "sequelize";
 import { withTransaction } from "../utils/withTransaction.js";
 import { getProtocol } from "../utils/helper.js";
 
@@ -497,14 +497,41 @@ export async function getAllProjectByBatchService({ req, res }) {
   (limit > 20) ? limit = 20 : limit;
   const offset = (page - 1) * limit;
 
+  // Filter by
+  // - project name
+  const projectCondition = { batchId };
+  // - course
+  const courseCondition = {};
+  // - category
+  const categoryCondition = {};
+  // - supervisor
+  const supervisorCondition = {};
+
+  if(req.query.name){
+    projectCondition.projectName = { [Op.like]: `%${req.query.name}%` };
+  }
+
+  if(req.query.course){
+    courseCondition.id = req.query.course;
+  }
+    
+  if(req.query.category){
+    categoryCondition.id = req.query.category;
+  }
+
+  if(req.query.supervisor){
+    supervisorCondition.id = req.query.supervisor;
+  }
+
   return  await withTransaction(async (transaction) => {
     const { count, rows: projects } = await ProjectModel.findAndCountAll({
-      where: { batchId },
+      where: projectCondition,
       include: [
         {
           model: UserModel,
           as: "Supervisor",
-          attributes: [["id", "supervisorId"], ["name", "supervisorName"]]
+          attributes: [["id", "supervisorId"], ["name", "supervisorName"]],
+          where: supervisorCondition,
         },
         {
           model: BatchModel,
@@ -514,7 +541,8 @@ export async function getAllProjectByBatchService({ req, res }) {
         {
           model: CourseModel,
           as: "ProjectCourse",
-          attributes: [["id", "courseId"], "courseName"],
+          attributes: [["id", "courseId"], "courseName", "coordinator_id"],
+          where: courseCondition,
           include: [
             {
               model: UserModel,
@@ -539,14 +567,13 @@ export async function getAllProjectByBatchService({ req, res }) {
           model: UserModel,
           as: "Teams",
           attributes: ["id", "userName"],
-          through: { attributes: [] },
-          // include: [
-          //   {
-          //     model: UserDetailModel,
-          //     as: "Profile",
-          //     attributes: ["username"]
-          //   }
-          // ]
+          through: { attributes: [] }
+        },
+        {
+          model: CategoryModel,
+          as: "Category",
+          attributes: [["id", "categoryId"], "categoryName", "categoryCode"],
+          where: categoryCondition
         }
       ],
       limit,
@@ -559,6 +586,7 @@ export async function getAllProjectByBatchService({ req, res }) {
       return {
         projectId: project.dataValues.id,
         projectName: project.dataValues.projectName,
+        boothNumber: project?.dataValues?.boothNumber,
         projectThumbnail: project.dataValues.projectThumbnail ? getProtocol(req,"projects",project.dataValues.projectThumbnail) : null,
         batchId: project.dataValues.Batch?.dataValues?.batchId,
         batchName: project.dataValues.Batch?.dataValues?.batchName,
@@ -569,6 +597,11 @@ export async function getAllProjectByBatchService({ req, res }) {
         courseSupervisorName: project.dataValues.Supervisor?.dataValues?.supervisorName,
         projectCreatedAt: project.dataValues.createdAt,
         isFinal: project.dataValues.Batch?.isFinal,
+        category: {
+          categoryId: project?.dataValues?.Category?.dataValues?.categoryId,
+          categoryName: project?.dataValues?.Category?.dataValues?.categoryName,
+          categoryCode: project?.dataValues?.Category?.dataValues?.categoryCode
+        },
         projectRequirements: project.dataValues.ProjectFieldValues.map(field => ({
             fieldName: field.BatchField.fieldName,
             fieldValue: field.fieldValue,
@@ -667,13 +700,11 @@ export async function getProjectInBatchByIdService({ req, res }) {
           as: "Teams",
           attributes: ["id", "userName"],
           through: { attributes: [] },
-          // include: [
-          //   {
-          //     model: UserDetailModel,
-          //     as: "Profile",
-          //     attributes: ["username"]
-          //   }
-          // ]
+        },
+        {
+          model: CategoryModel,
+          as: "Category",
+          attributes: [["id", "categoryId"], "categoryName", "categoryCode"]
         }
       ],
       order: [['created_at', 'DESC']],
@@ -683,6 +714,7 @@ export async function getProjectInBatchByIdService({ req, res }) {
     const data = {
       projectId: project.id,
       projectName: project.projectName,
+      boothNumber: project.boothNumber,
       projectThumbnail: project.projectThumbnail ? getProtocol(req,"projects",project.projectThumbnail) : null,
       batchId: project.Batch?.dataValues?.batchId,
       batchName: project.Batch?.dataValues?.batchName,
@@ -693,6 +725,11 @@ export async function getProjectInBatchByIdService({ req, res }) {
       courseSupervisorName: project.Supervisor?.dataValues?.supervisorName,
       projectCreatedAt: project.createdAt,
       isFinal: project.Batch?.isFinal,
+      category: {
+        categoryId: project?.Category?.dataValues?.categoryId,
+        categoryName: project?.Category?.dataValues?.categoryName,
+        categoryCode: project?.Category?.dataValues?.categoryCode
+      },
       projectRequirements: project.ProjectFieldValues.map(field => ({
         fieldName: field.BatchField.fieldName,
         fieldValue: field.fieldValue,

@@ -127,7 +127,7 @@ export async function createCourseService(courseName){
     }
     
     // create course
-    const course = await CourseModel.create({courseName},{transaction});
+    const course = await CourseModel.create({ courseName },{transaction});
     
     // commit transaction
     await transaction.commit();
@@ -204,7 +204,7 @@ export async function updateCourseService({req},courseRequest){
     }
 
     // update course
-    await CourseModel.update({coordinatorId:coordinator.id, courseName},{where:{id: singleCourse.id}},{transaction});
+    await CourseModel.update({coordinatorId:coordinator.id, courseName, code},{where:{id: singleCourse.id}},{transaction});
     singleCourse = await CourseModel.findOne({ where: { id: courseId } });
     data.courseId = singleCourse.id;
     data.courseName = singleCourse.courseName;

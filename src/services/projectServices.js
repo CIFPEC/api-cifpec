@@ -2,7 +2,7 @@ import { ErrorHandler } from "./../exceptions/errorHandler.js";
 import { checkIfExists, getProtocol, getRole } from "./../utils/helper.js";
 import prepareProjectFields from "./../utils/prepareProjectFields.js";
 import { withTransaction } from "./../utils/withTransaction.js";
-import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel, ProjectMemberArchiveModel } from "./../models/index.js";
+import { ProjectModel, ProjectMemberModel, UserDetailModel, UserModel, BatchModel, CourseModel, SupervisorCourseModel, BatchFieldModel, ProjectFieldValueModel, ProjectArchiveModel, ProjectMemberArchiveModel, CategoryModel } from "./../models/index.js";
 import { Op } from "sequelize";
 import fs from 'fs/promises';
 import path from "path";
@@ -123,13 +123,13 @@ export async function createProjectService({req,res}){
         { field:"userId", message:"You already have a project in this batch" }
       ])
     }
-  
+
     // Create project
     const newProject = await ProjectModel.create({
       projectName,
       courseId,
       batchId,
-      supervisorId,
+      supervisorId
     },{transaction});
 
     // filter user in teams
@@ -193,7 +193,7 @@ export async function getAllUserProjectService({req,res}){
             {
               model: ProjectModel,
               as: "Project",
-              attributes: [["id", "projectId"], "projectName", "projectThumbnail", "supervisorId", "isComplete", "createdAt"],
+              attributes: [["id", "projectId"], "projectName", "projectThumbnail", "supervisorId", "isComplete", "createdAt", "boothNumber"],
               include: [
                 {
                   model: UserModel,
@@ -240,6 +240,11 @@ export async function getAllUserProjectService({req,res}){
                       attributes: [["id", "userId"], "userName"]
                     },
                   ],
+                },
+                {
+                  model: CategoryModel,
+                  as: "Category",
+                  attributes: [["id", "categoryId"], "categoryName"]
                 }
               ],
               order: [['created_at', 'DESC']],
@@ -255,6 +260,7 @@ export async function getAllUserProjectService({req,res}){
       return {
         projectId: project.Project.projectId,
         projectName: project.Project.projectName,
+        boothNumber: project?.Project?.boothNumber,
         projectThumbnail: project.Project?.projectThumbnail ? getProtocol(req,"projects",project.Project.projectThumbnail) : null,
         batchId: project.Project.Batch.batchId,
         batchName: project.Project.Batch.batchName,
@@ -265,6 +271,11 @@ export async function getAllUserProjectService({req,res}){
         courseSupervisorName: project.Project.Supervisor?.supervisorName || null,
         projectCreatedAt: project.Project.createdAt,
         isFinal: project.Project.Batch.isFinal,
+        category: {
+          categoryId: project.Project?.Category?.categoryId,
+          categoryName: project?.Project?.Category?.categoryName,
+          categoryCode: project?.Project?.Category?.categoryCode
+        },
         projectRequirements: project.Project.ProjectFieldValues.map((field) => {
           return {
             fieldName: field.BatchField.fieldName,
@@ -292,7 +303,8 @@ export async function updateProjectService({req,res}){
       // get project ID from params
       const { projectId } = req.params;
       // find project
-      const project = await ProjectModel.findByPk(projectId,{transaction});
+      let project = await ProjectModel.findByPk(projectId,{transaction});
+      project = project.toJSON();
       // check if project exist
       if(!project){
         throw new ErrorHandler(400, "Bad Request",[
@@ -318,7 +330,8 @@ export async function updateProjectService({req,res}){
 
       // get all batchField in batch
       const batchFields = await BatchFieldModel.findAll({
-        where:{ batchId }
+        where:{ batchId },
+        transaction
       })
     
       // prepare data and check dataType,isRequired
@@ -336,7 +349,55 @@ export async function updateProjectService({req,res}){
         newValues: validateData,
         transaction
       });
-            
+      
+      const {categoryId} = req.body;
+      if(!categoryId){
+        throw new ErrorHandler(400, "Bad Request",[
+          { field:"categoryId", message:"Category is required" },
+          { field:"categoryId", message:"Category ID is required" }
+        ])
+      }
+      // prepare data to update project model
+      const columnToUpdate = {};
+      // check if data project changed
+      if(project.projectName !== req.body.projectName){
+        columnToUpdate.projectName = req.body.projectName;
+      }
+      if(!project.categoryId){
+        columnToUpdate.categoryId = categoryId;
+      }
+
+      // generate category code
+      const category = await CategoryModel.findByPk(categoryId);
+      if(!category){
+        throw new ErrorHandler(400, "Bad Request",[
+          { field:"categoryId", message:"Category not found" }
+        ])
+      }
+      const categoryCode = category?.categoryCode;
+      if(!categoryCode){
+        console.log("ERROR: Category code not set");
+        throw new ErrorHandler(500, "Internal Server Error");
+      }
+
+      const latestProject = await ProjectModel.findOne({
+        where: {
+          categoryId,
+          batchId
+        },
+        order: [['createdAt', 'DESC']],
+        attributes: ['boothNumber']
+      });
+
+      let nextNumber = 1;
+      if (latestProject?.boothNumber) {
+        const lastNum = latestProject.boothNumber.replace(/^\D+/g, '');
+        nextNumber = parseInt(lastNum) + 1;
+      }
+
+      const boothNumber = `${categoryCode}${nextNumber.toString().padStart(3, '0')}`;
+      columnToUpdate.boothNumber = boothNumber;
+      
       // get projectThumbnail
       const thumbnailFile = req.files.find(f => f.fieldname === "projectThumbnail");
       // check existing thumbnail
@@ -349,12 +410,14 @@ export async function updateProjectService({req,res}){
             await fs.unlink(oldThumbnail);
           }
         }
-        // update project thumbnail
-        await ProjectModel.update(
-          { projectThumbnail },
-          { where: { id: projectId }, transaction }
-        );
+        columnToUpdate.projectThumbnail = projectThumbnail;
       }
+
+      // update project thumbnail
+      await ProjectModel.update(
+        columnToUpdate,
+        { where: { id: projectId }, transaction }
+      );
       
       // create/update project field value with updateOnDuplicate
       await ProjectFieldValueModel.bulkCreate(validateData, {
@@ -465,7 +528,7 @@ export async function getProjectByIdService(req,projectId,externalTransaction=fa
   return await withTransaction(async (transaction) => { 
     const project = await ProjectModel.findOne({
       where: { id: projectId },
-      attributes: ["id", "projectName", "projectThumbnail"],
+      attributes: ["id", "projectName", "projectThumbnail", "boothNumber"],
       include: [
         {
           model: UserModel,
@@ -512,6 +575,11 @@ export async function getProjectByIdService(req,projectId,externalTransaction=fa
               as: "BatchField"
             }
           ]
+        },
+        {
+          model: CategoryModel,
+          as: "Category",
+          attributes: [["id", "categoryId"], "categoryName", "categoryCode"]
         }
       ],
       transaction
@@ -528,6 +596,7 @@ export async function getProjectByIdService(req,projectId,externalTransaction=fa
     const data = {
       projectId: id,
       ...detailProject,
+      boothNumber: project.boothNumber,
       projectThumbnail: projectThumbnail ? getProtocol(req,"projects",projectThumbnail) : null,
       batchId: Batch.id,
       batchName: Batch.batchName,
@@ -537,6 +606,11 @@ export async function getProjectByIdService(req,projectId,externalTransaction=fa
       courseSupervisorId: Supervisor.id,
       courseSupervisorName: Supervisor.name,
       projectCreatedAt: ProjectCourse?.createdAt,
+      category: {
+        categoryId: project.Category?.categoryId,
+        categoryName: project.Category?.categoryName,
+        categoryCode: project.Category?.categoryCode
+      },
       projectRequirements: ProjectFieldValues.map((fieldValue) => ({
         fieldName: fieldValue?.BatchField?.fieldName,
         fieldValue: fieldValue?.BatchField?.fieldType === "file" ? getProtocol(req,"projects",fieldValue?.fieldValue) : fieldValue?.fieldValue,

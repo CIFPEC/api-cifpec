@@ -4,6 +4,7 @@ import sequelizePaginate from "sequelize-paginate";
 import Courses from "./courseModel.js";
 import Batches from "./batchModel.js";
 import Users from './userModel.js';
+import Categories from "./categoryModel.js";
 
 const Projects = Database.define("project",
   {
@@ -80,6 +81,24 @@ const Projects = Database.define("project",
       onDelete: "NO ACTION",
       onUpdate: "CASCADE",
       field:"batch_id"
+    },
+    // - category_id
+    categoryId: {
+      type: DataTypes.BIGINT,
+      defaultValue: null,
+      references: {
+        model: Categories,
+        key: "id"
+      },
+      onDelete: "NO ACTION",
+      onUpdate: "CASCADE",
+      field: "category_id"
+    },
+    // - booth_number
+    boothNumber: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+      field:"booth_number"
     },
     // - is_complete
     isComplete: {
