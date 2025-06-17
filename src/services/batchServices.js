@@ -559,7 +559,7 @@ export async function getAllProjectByBatchService({ req, res }) {
             {
               model: BatchFieldModel,
               as: "BatchField",
-              attributes: ["fieldName"]
+              attributes: ["fieldName", "fieldType"]
             }
           ]
         },
@@ -604,7 +604,8 @@ export async function getAllProjectByBatchService({ req, res }) {
         },
         projectRequirements: project.dataValues.ProjectFieldValues.map(field => ({
             fieldName: field.BatchField.fieldName,
-            fieldValue: field.fieldValue,
+            fieldValue: field.BatchField.fieldType === "file" ? getProtocol(req,"projects",field.fieldValue) : field.fieldValue,
+            fieldType: field.BatchField.fieldType
         })),
         projectTeamMembers: project.dataValues.Teams.map(member => ({
           userId: member.id,

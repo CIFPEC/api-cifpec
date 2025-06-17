@@ -368,35 +368,37 @@ export async function updateProjectService({req,res}){
       }
 
       // generate category code
-      const category = await CategoryModel.findByPk(categoryId);
-      if(!category){
-        throw new ErrorHandler(400, "Bad Request",[
-          { field:"categoryId", message:"Category not found" }
-        ])
-      }
-      const categoryCode = category?.categoryCode;
-      if(!categoryCode){
-        console.log("ERROR: Category code not set");
-        throw new ErrorHandler(500, "Internal Server Error");
-      }
+      if(!categoryId){
+        const category = await CategoryModel.findByPk(categoryId);
+        if(!category){
+          throw new ErrorHandler(400, "Bad Request",[
+            { field:"categoryId", message:"Category not found" }
+          ])
+        }
+        const categoryCode = category?.categoryCode;
+        if(!categoryCode){
+          console.log("ERROR: Category code not set");
+          throw new ErrorHandler(500, "Internal Server Error");
+        }
 
-      const latestProject = await ProjectModel.findOne({
-        where: {
-          categoryId,
-          batchId
-        },
-        order: [['createdAt', 'DESC']],
-        attributes: ['boothNumber']
-      });
+        const latestProject = await ProjectModel.findOne({
+          where: {
+            categoryId,
+            batchId
+          },
+          order: [['createdAt', 'DESC']],
+          attributes: ['boothNumber']
+        });
 
-      let nextNumber = 1;
-      if (latestProject?.boothNumber) {
-        const lastNum = latestProject.boothNumber.replace(/^\D+/g, '');
-        nextNumber = parseInt(lastNum) + 1;
+        let nextNumber = 1;
+        if (latestProject?.boothNumber) {
+          const lastNum = latestProject.boothNumber.replace(/^\D+/g, '');
+          nextNumber = parseInt(lastNum) + 1;
+        }
+
+        const boothNumber = `${categoryCode}${nextNumber.toString().padStart(3, '0')}`;
+        columnToUpdate.boothNumber = boothNumber;
       }
-
-      const boothNumber = `${categoryCode}${nextNumber.toString().padStart(3, '0')}`;
-      columnToUpdate.boothNumber = boothNumber;
       
       // get projectThumbnail
       const thumbnailFile = req.files.find(f => f.fieldname === "projectThumbnail");

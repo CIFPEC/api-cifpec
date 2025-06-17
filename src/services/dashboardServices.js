@@ -1,5 +1,5 @@
 import { ErrorHandler } from "../exceptions/errorHandler.js";
-import { BatchModel, CourseModel, ProjectArchiveModel, ProjectModel, UserDetailModel, UserModel } from "../models/index.js";
+import { BatchModel, CourseModel, ProjectArchiveModel, ProjectMemberModel, ProjectModel, UserDetailModel, UserModel } from "../models/index.js";
 import { getProtocol, getRole } from "../utils/helper.js";
 import { withTransaction } from "../utils/withTransaction.js";
 
@@ -20,9 +20,19 @@ export async function getDashboardService({req, res}){
       console.log("ERROR: ","Batch not found");
       throw new ErrorHandler(500, "Internal Server Error");
     } 
-    const currentBatchId = latestBatch.id;
+    const currentBatchId = req.query.batchId || latestBatch.id;
     const totalStudentsInBatch = await UserDetailModel.count({ where: { batchId: currentBatchId },transaction });
     const totalProjectsInBatch = await ProjectModel.count({ where: { batchId: currentBatchId },transaction });
+    const totalStudentsWithProjects = await ProjectMemberModel.count({
+      distinct: true,
+      col: 'user_id',
+      include: {
+        model: ProjectModel,
+        as: 'Project',
+        where: { batchId: currentBatchId }
+      },
+      transaction
+    });
 
     const getCurrentStudentDetails = await UserModel.findAll({
       attributes: ['userName'],
@@ -55,6 +65,7 @@ export async function getDashboardService({req, res}){
       totalProjects: totalCurrentProjects + totalArchiveProjects,
       totalStudentsInBatch,
       totalProjectsInBatch,
+      totalStudentsWithProjects,
       totalSupervisors,
       totalCoordinators,
       studentLists
