@@ -62,7 +62,7 @@ async function clearVerifyTable() {
     // find verify
     const verifys = await VerifyModel.findAll({
       where: {
-        createdAt: { [Op.lt]: new Date(Date.now() - 1000 * 60 * 60) } // get email who created 1 hour ago
+        created_at: { [Op.lt]: new Date(Date.now() - 1000 * 60 * 60) } // get email who created 1 hour ago
       },
       transaction
     });

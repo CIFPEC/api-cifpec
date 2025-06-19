@@ -84,6 +84,36 @@ export async function createProjectService({req,res}){
       ]);
     }
 
+    // check if selected users is already project
+    const selectedUsers = await ProjectMemberModel.findAll({
+      where: {
+        userId: {
+          [Op.in]: teams
+        }
+      },
+      include: [
+        {
+          model: ProjectModel,
+          as: "Project",
+          where: { isArchived: false },
+          include: [
+            {
+              model: BatchModel,
+              as: "Batch",
+              where: { isFinal: false }
+            }
+          ]
+        }
+      ],
+      transaction
+    });
+
+    if (selectedUsers.length > 0) {
+      throw new ErrorHandler(400, "Bad Request",[
+        { field:"teams", message:"Selected users already have a project in this batch" }
+      ])
+    }
+
     // find supervisor in course
     const supervisorCourse =  await SupervisorCourseModel.findOne({
       where:{ courseId, supervisorId },
@@ -368,7 +398,7 @@ export async function updateProjectService({req,res}){
       }
 
       // generate category code
-      if(!categoryId){
+      if(!project.boothNumber){
         const category = await CategoryModel.findByPk(categoryId);
         if(!category){
           throw new ErrorHandler(400, "Bad Request",[
